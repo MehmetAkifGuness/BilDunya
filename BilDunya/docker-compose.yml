@@ -1,0 +1,48 @@
+services:
+  postgresql:
+    image: postgres:16-alpine
+    container_name: bildunya_postgres
+    environment:
+      POSTGRES_USER: bildunya_user
+      POSTGRES_PASSWORD: bildunya_password
+      POSTGRES_DB: bildunya_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bildunya_user -d bildunya_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bildunya_network
+
+  bildunya_backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bildunya_backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgresql:5432/bildunya_db
+      SPRING_DATASOURCE_USERNAME: bildunya_user
+      SPRING_DATASOURCE_PASSWORD: bildunya_password
+      JWT_SECRET: "your-secret-key-change-this-in-production-at-least-32-characters-long"
+      JWT_EXPIRATION: 86400000
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    networks:
+      - bildunya_network
+    volumes:
+      - ./uploads:/app/uploads
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  bildunya_network:
+    driver: bridge

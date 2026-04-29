@@ -1,0 +1,65 @@
+spring:
+  application:
+    name: bildunya-backend
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/bildunya_db
+    username: bildunya_user
+    password: bildunya_password
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        default_batch_fetch_size: 50
+        format_sql: true
+        use_sql_comments: true
+
+  liquibase:
+    enabled: false
+
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+  compression:
+    enabled: true
+    min-response-size: 2048
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain,text/css,text/javascript,application/javascript
+
+logging:
+  level:
+    root: INFO
+    com.bildunya: DEBUG
+    org.springframework.web: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %logger{36} - %msg%n"
+
+# JWT Configuration
+jwt:
+  secret: "your-secret-key-change-this-in-production-at-least-32-characters-long"
+  expiration: 86400000 # 24 hours in milliseconds
+
+# File Upload
+file:
+  upload:
+    directory: "uploads"
+    allowed-types: "image/jpeg,image/png,video/mp4,video/quicktime"
+    max-size: 104857600 # 100MB
+
+# Swagger/OpenAPI
+springdoc:
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
