@@ -7,8 +7,16 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/api_config.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radii.dart';
+import '../../../core/utils/app_snackbar.dart';
 import '../../../data/models/content_dto.dart';
+import '../../../data/repositories/chat_repository.dart';
+import '../../../data/repositories/comment_repository.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../chat/providers/chat_provider.dart';
+import '../../chat/screens/chat_view.dart';
+import '../providers/comments_provider.dart';
 import '../providers/contents_provider.dart';
+import 'comments_view.dart';
 
 class ContentDetailArgs {
   const ContentDetailArgs({required this.contentId, this.preview});
@@ -58,6 +66,61 @@ class _ContentDetailViewState extends State<ContentDetailView> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  void _openComments(ContentDto c) {
+    final auth = context.read<AuthProvider>();
+    if (!auth.isAuthenticated) {
+      showAppSnackBar(context, 'Yorumlar için giriş yapın.', isError: true);
+      return;
+    }
+    final id = c.id;
+    if (id == null) return;
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (ctx) => ChangeNotifierProvider(
+          create: (_) => CommentsProvider(
+            ctx.read<CommentRepository>(),
+            contentId: id,
+          )..load(),
+          child: CommentsView(
+            args: CommentsViewArgs(contentId: id, preview: c),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openChat(ContentDto c) {
+    final auth = context.read<AuthProvider>();
+    if (!auth.isAuthenticated) {
+      showAppSnackBar(context, 'Sohbet için giriş yapın.', isError: true);
+      return;
+    }
+    final me = auth.user?.username;
+    final peer = c.user?.username;
+    if (me == null || peer == null || peer == me) {
+      showAppSnackBar(
+        context,
+        'Bu kullanıcıyla sohbet başlatılamıyor.',
+        isError: true,
+      );
+      return;
+    }
+    final name = c.user?.displayName ?? peer;
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (ctx) => ChangeNotifierProvider(
+          create: (_) => ChatProvider(
+            repository: ctx.read<ChatRepository>(),
+            myUsername: me,
+            peerUsername: peer,
+            peerDisplayName: name,
+          )..init(),
+          child: const ChatView(),
+        ),
+      ),
+    );
   }
 
   Future<void> _openInExternalMap(ContentDto c) async {
@@ -262,6 +325,29 @@ class _ContentDetailViewState extends State<ContentDetailView> {
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => _openComments(c),
+                              icon: const Icon(Symbols.chat_bubble, size: 20),
+                              label: const Text('Yorumlar'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: FilledButton.tonalIcon(
+                              onPressed: () => _openChat(c),
+                              icon: const Icon(Symbols.chat, size: 20),
+                              label: const Text('Mesaj'),
+                            ),
+                          ),
                         ],
                       ),
                     ),

@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import 'core/network/dio_client.dart';
 import 'core/theme/app_theme.dart';
 import 'data/repositories/auth_repository.dart';
+import 'data/repositories/chat_repository.dart';
+import 'data/repositories/comment_repository.dart';
 import 'data/repositories/content_repository.dart';
 import 'features/auth/providers/auth_provider.dart';
 import 'features/auth/screens/login_screen.dart';
@@ -22,11 +24,15 @@ void main() {
   final dio = DioClient.create(storage);
   final authRepository = AuthRepository(dio, storage);
   final contentRepository = ContentRepository(dio);
+  final commentRepository = CommentRepository(dio);
+  final chatRepository = ChatRepository(dio);
 
   runApp(
     MultiProvider(
       providers: [
         Provider<ContentRepository>.value(value: contentRepository),
+        Provider<CommentRepository>.value(value: commentRepository),
+        Provider<ChatRepository>.value(value: chatRepository),
         ChangeNotifierProvider(
           create: (_) => AuthProvider(authRepository),
         ),
