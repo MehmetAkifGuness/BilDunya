@@ -55,4 +55,22 @@ public interface ContentRepository extends JpaRepository<Content, Long> {
     Page<Content> findVerifiedContent(Pageable pageable);
 
     List<Content> findByVerificationStatus(String verificationStatus);
+
+    long countByUserAndIsDeletedFalse(User user);
+
+    @Query("SELECT COUNT(DISTINCT c.locationName) FROM Content c WHERE c.user = :user AND c.isDeleted = false "
+            + "AND c.locationName IS NOT NULL AND LENGTH(TRIM(c.locationName)) > 0")
+    long countDistinctLocationNames(@Param("user") User user);
+
+    @Query("SELECT COUNT(c) FROM Content c WHERE c.user = :user AND c.isDeleted = false "
+            + "AND c.fileUrl IS NOT NULL AND LENGTH(TRIM(c.fileUrl)) > 0")
+    long countWithUploadedMedia(@Param("user") User user);
+
+    @Query("SELECT COUNT(c) FROM Content c WHERE c.user = :user AND c.isDeleted = false AND c.isVerified = true")
+    long countVerifiedByUser(@Param("user") User user);
+
+    @Query("SELECT COUNT(c) FROM Content c WHERE c.user = :user AND c.isDeleted = false AND ("
+            + "LOWER(c.contentType) LIKE '%hist%' OR LOWER(COALESCE(c.tags, '')) LIKE '%tarih%' "
+            + "OR LOWER(COALESCE(c.description, '')) LIKE '%tarih%')")
+    long countHistoricThemed(@Param("user") User user);
 }

@@ -88,6 +88,24 @@ class ContentRepository {
     }
   }
 
+  Future<PagedContentResult> getUserContent({
+    required int userId,
+    int page = 0,
+    int size = 50,
+  }) async {
+    try {
+      final res = await _dio.get<Map<String, dynamic>>(
+        '/contents/user/$userId',
+        queryParameters: {'page': page, 'size': size},
+      );
+      final body = res.data;
+      if (body == null) throw Exception('Boş yanıt');
+      return PagedContentResult.fromJson(body);
+    } on DioException catch (e) {
+      throw Exception(dioErrorMessage(e));
+    }
+  }
+
   Future<PagedContentResult> getNearby({
     required double latitude,
     required double longitude,

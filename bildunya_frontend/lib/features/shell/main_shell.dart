@@ -6,6 +6,7 @@ import '../content/screens/create_content_view.dart';
 import '../feed/feed_view.dart';
 import '../home/home_view.dart';
 import '../map/map_view.dart';
+import '../profile/screens/profile_view.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -37,6 +38,7 @@ class _MainShellState extends State<MainShell> {
           HomeView(),
           MapView(),
           FeedView(),
+          ProfileView(),
         ],
       ),
       floatingActionButton: FloatingActionButton(
@@ -68,6 +70,11 @@ class _MainShellState extends State<MainShell> {
             icon: Icon(Symbols.dynamic_feed),
             selectedIcon: Icon(Symbols.dynamic_feed),
             label: 'Akış',
+          ),
+          NavigationDestination(
+            icon: Icon(Symbols.person),
+            selectedIcon: Icon(Symbols.person),
+            label: 'Profil',
           ),
         ],
       ),

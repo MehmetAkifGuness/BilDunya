@@ -2,7 +2,9 @@ package com.bildunya.controller;
 
 import com.bildunya.dto.UpdateProfileRequest;
 import com.bildunya.dto.UserDto;
+import com.bildunya.dto.UserGamificationDto;
 import com.bildunya.security.UserPrincipal;
+import com.bildunya.service.GamificationService;
 import com.bildunya.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -23,6 +25,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class UserController {
 
     private final UserService userService;
+    private final GamificationService gamificationService;
 
     @GetMapping("/me")
     @SecurityRequirement(name = "Bearer Authentication")
@@ -30,6 +33,14 @@ public class UserController {
     public ResponseEntity<UserDto> me(Authentication authentication) {
         UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
         return ResponseEntity.ok(userService.getProfile(principal.getUsername()));
+    }
+
+    @GetMapping("/me/gamification")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @Operation(summary = "Rozetler, hedefler ve profil istatistikleri (içeriklerden türetilir)")
+    public ResponseEntity<UserGamificationDto> myGamification(Authentication authentication) {
+        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
+        return ResponseEntity.ok(gamificationService.buildForUsername(principal.getUsername()));
     }
 
     @PatchMapping("/me")
