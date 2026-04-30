@@ -7,7 +7,7 @@ import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "contents", indexes = {
-        @Index(name = "idx_user_id", columnList = "user_id"),
+        @Index(name = "idx_content_user_id", columnList = "user_id"),
         @Index(name = "idx_latitude_longitude", columnList = "latitude,longitude"),
         @Index(name = "idx_created_at", columnList = "created_at")
 })

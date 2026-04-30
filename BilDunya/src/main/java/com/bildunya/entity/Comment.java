@@ -6,7 +6,7 @@ import lombok.*;
 @Entity
 @Table(name = "comments", indexes = {
         @Index(name = "idx_content_id", columnList = "content_id"),
-        @Index(name = "idx_user_id", columnList = "user_id")
+        @Index(name = "idx_comment_user_id", columnList = "user_id")
 })
 @Data
 @NoArgsConstructor

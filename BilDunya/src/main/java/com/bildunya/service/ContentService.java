@@ -50,9 +50,11 @@ public class ContentService {
                 .locationName(request.getLocationName())
                 .shareType(request.getShareType() != null ? request.getShareType() : "PUBLIC")
                 .tags(request.getTags())
+                .isVerified(false)
                 .verificationStatus("PENDING")
                 .viewCount(0L)
                 .build();
+        content.setIsDeleted(false);
 
         content = contentRepository.save(content);
         return mapToContentDto(content);
@@ -74,9 +76,11 @@ public class ContentService {
                 .shareType(request.getShareType() != null ? request.getShareType() : "PUBLIC")
                 .tags(request.getTags())
                 .exifData(exifGps != null ? exifGps.json() : null)
+                .isVerified(false)
                 .verificationStatus("PENDING")
                 .viewCount(0L)
                 .build();
+        content.setIsDeleted(false);
 
         if (exifGps != null && isWithinDistanceKm(
                 exifGps.latitude(),

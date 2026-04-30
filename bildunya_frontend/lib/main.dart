@@ -11,6 +11,9 @@ import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/register_screen.dart';
 import 'features/auth/screens/splash_screen.dart';
 import 'features/content/providers/contents_provider.dart';
+import 'features/content/screens/content_detail_view.dart';
+import 'features/content/screens/create_content_view.dart';
+import 'features/content/screens/location_picker_view.dart';
 import 'features/shell/main_shell.dart';
 
 void main() {
@@ -23,6 +26,7 @@ void main() {
   runApp(
     MultiProvider(
       providers: [
+        Provider<ContentRepository>.value(value: contentRepository),
         ChangeNotifierProvider(
           create: (_) => AuthProvider(authRepository),
         ),
@@ -50,6 +54,17 @@ class BilDunyaApp extends StatelessWidget {
         LoginScreen.routeName: (_) => const LoginScreen(),
         RegisterScreen.routeName: (_) => const RegisterScreen(),
         MainShell.routeName: (_) => const MainShell(),
+        CreateContentView.routeName: (_) => const CreateContentView(),
+        LocationPickerView.routeName: (_) => const LocationPickerView(),
+        ContentDetailView.routeName: (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          if (args is! ContentDetailArgs) {
+            return const Scaffold(
+              body: Center(child: Text('Geçersiz içerik bağlantısı')),
+            );
+          }
+          return ContentDetailView(args: args);
+        },
       },
     );
   }

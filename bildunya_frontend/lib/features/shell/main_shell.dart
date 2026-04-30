@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../content/screens/create_content_view.dart';
+import '../feed/feed_view.dart';
 import '../home/home_view.dart';
 import '../map/map_view.dart';
-import '../feed/feed_view.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -18,6 +19,15 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _index = 0;
 
+  void _openCreateContent(BuildContext context) {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        fullscreenDialog: true,
+        builder: (context) => const CreateContentView(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -29,8 +39,16 @@ class _MainShellState extends State<MainShell> {
           FeedView(),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        elevation: 4,
+        backgroundColor: AppColors.primaryContainer,
+        foregroundColor: AppColors.onPrimary,
+        tooltip: 'Paylaşım oluştur',
+        onPressed: () => _openCreateContent(context),
+        child: const Icon(Symbols.add, size: 28),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: NavigationBar(
-        height: 68,
         backgroundColor: AppColors.surfaceContainer,
         indicatorColor: AppColors.primaryContainer.withValues(alpha: 0.25),
         selectedIndex: _index,

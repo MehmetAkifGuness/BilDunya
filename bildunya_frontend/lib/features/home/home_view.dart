@@ -5,8 +5,8 @@ import 'package:provider/provider.dart';
 import '../../core/constants/api_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radii.dart';
-import '../../core/utils/app_snackbar.dart';
 import '../../data/models/content_dto.dart';
+import '../content/screens/content_detail_view.dart';
 import '../auth/providers/auth_provider.dart';
 import '../auth/screens/login_screen.dart';
 import '../content/providers/contents_provider.dart';
@@ -245,7 +245,15 @@ class _NearbyTile extends StatelessWidget {
         ),
         trailing: const Icon(Symbols.chevron_right, color: AppColors.secondary),
         onTap: () {
-          showAppSnackBar(context, 'İçerik detayı yakında.');
+          final id = content.id;
+          if (id == null) return;
+          Navigator.of(context).push<void>(
+            MaterialPageRoute<void>(
+              builder: (context) => ContentDetailView(
+                args: ContentDetailArgs(contentId: id, preview: content),
+              ),
+            ),
+          );
         },
       ),
     );

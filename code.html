@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html class="dark" lang="tr"><head>
+<html lang="tr"><head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Plus_Jakarta_Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
@@ -74,137 +74,139 @@
         .material-symbols-outlined {
             font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
         }
-        body {
-            background-color: #F8F9FA;
-            color: #000000;
-        }
         .artboard {
-            width: 375px;
-            height: 812px;
+            aspect-ratio: 9/19.5;
+            width: 100%;
+            overflow: hidden;
             background: #0a0e1a;
             position: relative;
-            overflow: hidden;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .screen-content {
+            scrollbar-width: none;
+            height: 100%;
+            overflow-y: auto;
+        }
+        .screen-content::-webkit-scrollbar {
+            display: none;
         }
     </style>
 </head>
-<body class="flex flex-col items-center justify-center min-h-screen py-16 px-4">
-<div class="flex flex-col lg:flex-row items-center justify-center gap-12 max-w-[1200px] w-full">
-<div class="artboard flex-shrink-0">
-<div class="h-full w-full bg-surface-container-lowest flex flex-col items-center justify-center px-10 relative">
-<div class="absolute top-[-10%] left-[-10%] w-72 h-72 bg-primary-container/10 rounded-full blur-[100px]"></div>
-<div class="z-10 text-center w-full">
-<div class="mb-12">
-<span class="text-6xl font-headline font-black text-primary-container tracking-tighter">BilDünya</span>
-<p class="text-secondary font-label text-[10px] uppercase tracking-[0.3em] mt-3 opacity-60">The Midnight Navigator</p>
+<body class="bg-neutral-50 min-h-screen flex items-center justify-center p-4">
+<div class="max-w-[1200px] w-full bg-white p-12 shadow-sm border border-neutral-200">
+<!-- Screens Grid -->
+<div class="grid grid-cols-3 gap-8">
+<!-- Screen 1: İçerik Detayı (SCREEN_26) -->
+<div class="artboard border border-neutral-200">
+<div class="screen-content">
+<div class="relative">
+<img alt="Ayasofya" class="w-full aspect-[3/4] object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCAB1gtU6gTRvFxqezgK-cHreWzthu4bMnNqkbvjxxtmG00jJgti-fPxc6K8l9UiO9aDtOeYQUicDlQRZr0HyjyLSmvFv8ZLPf6SXavRWMAGsl1uov5ABGh5DJ7yQt1mVzVFKPwISsI25L6udvi_ubMBRIsVPPqYcq5gOFBTIDgiZFpkplQI75B5yAPeUcy4OuuSsmrtMnoYon6ErG9j8xGNr_Iy2KQEhHtXj3GHFNMOBQbpB0y_A2pUKRN2wMsF3nRY0rA7FYeohY"/>
+<div class="absolute top-4 left-4 p-2 bg-black/20 backdrop-blur-md rounded-full text-white">
+<span class="material-symbols-outlined text-sm">arrow_back</span>
 </div>
-<div class="space-y-6 mt-16 text-left">
-<h2 class="text-on-surface font-headline font-bold text-3xl leading-tight">Yolculuğun Burada Başlıyor.</h2>
-<p class="text-secondary font-body text-base leading-relaxed opacity-80">Şehrin gizli rotalarını ve seçkin mekanlarını keşfetmek için profesyonel rehberin.</p>
+<div class="absolute bottom-6 left-6">
+<div class="flex items-center gap-1 bg-black/40 backdrop-blur-md px-2 py-1 rounded-full mb-2 w-fit">
+<span class="material-symbols-outlined text-[10px] text-primary" style="font-variation-settings: 'FILL' 1;">location_on</span>
+<span class="font-label text-[8px] text-secondary uppercase tracking-tighter">Ayasofya, İstanbul</span>
 </div>
-<div class="mt-20 w-full">
-<div class="h-14 w-full bg-gradient-to-r from-primary to-primary-container rounded-2xl flex items-center justify-center font-label font-bold text-on-primary text-base shadow-xl">
-                            Keşfetmeye Başla
-                        </div>
-</div>
-</div>
-<div class="absolute bottom-12 flex gap-2.5">
-<div class="h-1.5 w-10 bg-primary-container rounded-full"></div>
-<div class="h-1.5 w-3 bg-surface-variant rounded-full"></div>
-<div class="h-1.5 w-3 bg-surface-variant rounded-full"></div>
+<h3 class="font-headline font-extrabold text-xl text-primary leading-tight">Tarihin Sessiz Tanığı: Mimari Bir Başyapıt</h3>
 </div>
 </div>
+<div class="p-6">
+<div class="flex gap-4 mb-6">
+<div class="flex flex-col items-center"><span class="material-symbols-outlined text-primary text-xl">favorite</span><span class="text-[8px] text-secondary uppercase">Beğen</span></div>
+<div class="flex flex-col items-center"><span class="material-symbols-outlined text-primary text-xl">bookmark</span><span class="text-[8px] text-secondary uppercase">Kaydet</span></div>
+<div class="flex flex-col items-center"><span class="material-symbols-outlined text-primary text-xl">share</span><span class="text-[8px] text-secondary uppercase">Paylaş</span></div>
 </div>
-<div class="artboard flex-shrink-0">
-<div class="h-full w-full bg-surface-container-lowest flex flex-col px-10 pt-28">
-<div class="mb-12">
-<h2 class="text-on-surface font-headline font-extrabold text-3xl tracking-tight">Tekrar Hoş Geldin.</h2>
-<p class="text-secondary font-body text-base mt-3 opacity-70">Hesabına giriş yaparak keşfe devam et.</p>
+<p class="font-body text-xs text-on-surface-variant leading-relaxed mb-4">Ayasofya, sadece bir bina değil; imparatorlukların yükselişine ve çöküşüne tanıklık etmiş zamansız bir anıttır.</p>
+<div class="bg-surface-container-low p-4 rounded-xl">
+<h4 class="font-label text-[10px] font-bold text-primary uppercase mb-2">Lokasyon Bilgisi</h4>
+<div class="w-full h-24 bg-surface-container rounded-lg mb-2 grayscale">
+<img class="w-full h-full object-cover opacity-50" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCjp9itL8-E38AcIjxi9tr9HfId8RP82I0if3iQIAnu6raVQWfaGK2b2ML5bskNpmsPkZAYDpy7t0pMERY1FZsmscSNMFcDN1x4uFX0iUGiIVafKAjeZ1jKPjk35twDF97WDTY6fcBlAQvhq74CtJHUununwEhgkiAddehvW5ZQCg8TFGYkpmxvNioXoHiNu_RuRv5KW9VLctk5GUObgoTe4qqXuljDMXS9Fj7x4g87OrLfiN-uCA54IGyldLN_bmUJF_RHRGCSEzU"/>
 </div>
-<div class="space-y-7">
-<div class="space-y-2.5">
-<label class="text-secondary font-label text-[10px] uppercase tracking-widest ml-1 opacity-60">E-POSTA ADRESİ</label>
-<div class="h-16 w-full bg-surface-container-low rounded-2xl border border-outline-variant/10 flex items-center px-5">
-<span class="material-symbols-outlined text-secondary text-2xl mr-4">mail</span>
-<span class="text-on-surface/30 text-base font-body">isim@ornek.com</span>
-</div>
-</div>
-<div class="space-y-2.5">
-<label class="text-secondary font-label text-[10px] uppercase tracking-widest ml-1 opacity-60">ŞİFRE</label>
-<div class="h-16 w-full bg-surface-container-low rounded-2xl border border-outline-variant/10 flex items-center px-5">
-<span class="material-symbols-outlined text-secondary text-2xl mr-4">lock</span>
-<span class="text-on-surface/30 text-base font-body">••••••••</span>
-<span class="material-symbols-outlined text-secondary text-2xl ml-auto">visibility_off</span>
-</div>
-</div>
-<div class="flex justify-end pt-1">
-<span class="text-primary-container font-label text-sm font-semibold">Şifremi Unuttum</span>
-</div>
-<div class="pt-6">
-<div class="h-16 w-full bg-gradient-to-br from-primary to-primary-container rounded-2xl flex items-center justify-center font-label font-bold text-on-primary text-base shadow-lg">
-                            Giriş Yap
-                        </div>
-</div>
-</div>
-<div class="mt-auto pb-16 flex flex-col items-center gap-6">
-<div class="flex items-center gap-4 w-full">
-<div class="h-[1px] flex-1 bg-outline-variant/20"></div>
-<span class="text-secondary font-label text-[10px] uppercase tracking-widest opacity-40">veya</span>
-<div class="h-[1px] flex-1 bg-outline-variant/20"></div>
-</div>
-<div class="flex gap-5">
-<div class="w-14 h-14 rounded-full border border-outline-variant/20 flex items-center justify-center bg-surface-container">
-<span class="material-symbols-outlined text-on-surface text-2xl">google</span>
-</div>
-<div class="w-14 h-14 rounded-full border border-outline-variant/20 flex items-center justify-center bg-surface-container">
-<span class="material-symbols-outlined text-on-surface text-2xl">apple</span>
+<p class="text-[10px] text-secondary">Sultan Ahmet, Ayasofya Meydanı, 34122 Fatih/İstanbul</p>
 </div>
 </div>
 </div>
 </div>
+<!-- Screen 2: Paylaşım Oluştur (SCREEN_4) -->
+<div class="artboard border border-neutral-200">
+<div class="screen-content flex flex-col">
+<div class="p-6 flex justify-between items-center">
+<span class="material-symbols-outlined text-on-surface">close</span>
+<h3 class="font-headline font-bold text-base text-on-surface">Paylaşım Oluştur</h3>
+<span class="font-label font-bold text-primary-container text-xs">Yayınla</span>
 </div>
-<div class="artboard flex-shrink-0">
-<div class="h-full w-full bg-surface-container-lowest flex flex-col px-10 pt-28">
-<div class="mb-12">
-<h2 class="text-on-surface font-headline font-extrabold text-3xl tracking-tight">Hesap Oluştur.</h2>
-<p class="text-secondary font-body text-base mt-3 opacity-70">BilDünya ekosistemine katılın.</p>
-</div>
-<div class="space-y-6">
-<div class="space-y-2.5">
-<label class="text-secondary font-label text-[10px] uppercase tracking-widest ml-1 opacity-60">AD SOYAD</label>
-<div class="h-14 w-full bg-surface-container-low rounded-2xl border border-outline-variant/10 flex items-center px-5">
-<span class="material-symbols-outlined text-secondary text-xl mr-4">person</span>
-<span class="text-on-surface/30 text-base font-body">Adınız Soyadınız</span>
-</div>
-</div>
-<div class="space-y-2.5">
-<label class="text-secondary font-label text-[10px] uppercase tracking-widest ml-1 opacity-60">E-POSTA</label>
-<div class="h-14 w-full bg-surface-container-low rounded-2xl border border-outline-variant/10 flex items-center px-5">
-<span class="material-symbols-outlined text-secondary text-xl mr-4">mail</span>
-<span class="text-on-surface/30 text-base font-body">eposta@adresiniz.com</span>
+<div class="px-6 space-y-6">
+<div class="w-full aspect-square rounded-2xl bg-surface-container-low flex items-center justify-center border-2 border-dashed border-outline-variant">
+<div class="text-center">
+<span class="material-symbols-outlined text-secondary text-4xl mb-2">add_photo_alternate</span>
+<p class="font-label text-[10px] text-secondary">Fotoğraf veya Video Ekle</p>
 </div>
 </div>
-<div class="space-y-2.5">
-<label class="text-secondary font-label text-[10px] uppercase tracking-widest ml-1 opacity-60">ŞİFRE OLUŞTUR</label>
-<div class="h-14 w-full bg-surface-container-low rounded-2xl border border-outline-variant/10 flex items-center px-5">
-<span class="material-symbols-outlined text-secondary text-xl mr-4">lock</span>
-<span class="text-on-surface/30 text-base font-body">••••••••</span>
+<div class="space-y-3">
+<div class="bg-surface-container p-4 rounded-xl">
+<textarea class="w-full bg-transparent border-none focus:ring-0 text-on-surface font-body text-xs resize-none h-24 placeholder:text-secondary/40" placeholder="Neler düşünüyorsun?"></textarea>
+</div>
+<div class="flex items-center justify-between bg-surface-container p-4 rounded-xl">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-container text-xl">location_on</span>
+<span class="font-body text-xs text-on-surface">Konum Ekle</span>
+</div>
+<span class="material-symbols-outlined text-secondary text-xl">chevron_right</span>
+</div>
+<div class="flex items-center justify-between bg-surface-container p-4 rounded-xl">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-container text-xl">sell</span>
+<span class="font-body text-xs text-on-surface">Etiketle</span>
+</div>
+<span class="material-symbols-outlined text-secondary text-xl">add</span>
 </div>
 </div>
-<div class="flex items-start gap-3.5 pt-4">
-<div class="w-6 h-6 rounded-lg bg-primary-container flex items-center justify-center flex-shrink-0">
-<span class="material-symbols-outlined text-on-primary text-sm font-bold">check</span>
-</div>
-<p class="text-secondary font-body text-xs leading-relaxed opacity-70">Kullanım Koşullarını ve Gizlilik Politikasını okudum, kabul ediyorum.</p>
-</div>
-<div class="pt-6">
-<div class="h-16 w-full border-2 border-primary-container/30 bg-surface-container-low rounded-2xl flex items-center justify-center font-label font-bold text-primary-container text-base">
-                            Kayıt Ol
-                        </div>
 </div>
 </div>
-<div class="mt-auto pb-16 flex justify-center">
-<p class="text-secondary font-body text-sm">Zaten bir hesabınız var mı? <span class="text-primary-container font-bold underline underline-offset-4 ml-1">Giriş Yap</span></p>
+</div>
+<!-- Screen 3: Konum Seçimi -->
+<div class="artboard border border-neutral-200">
+<div class="screen-content relative">
+<div class="absolute inset-0 bg-surface-dim">
+<img class="w-full h-full object-cover opacity-40 grayscale contrast-125" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB7IJ_FMLNWPllfsbaoB-gVtvywDRXaY6hhOCf1k1W9zM6LaweoqG5QtjyJM1P8sMFV0iQUX2AaCBRYym_ohFotFPC0l36COBbCAOAQB5_pu_ckalT93Gp5U76Sii-qZOFg48vDdU93ykfBBIFzl8bltGL27ax7uJttzymdg1mMj7Xodo1JF-mra_RmkjKMRw2YZ9VXOmcj8yXVttwcQp0nFOxnW0EoLnPLW9IRJrpnBkJjDrR2wHSRBNp_9dvDs9ZGSABdjSez1j4"/>
+</div>
+<div class="absolute top-12 left-4 right-4">
+<div class="bg-surface-container/80 backdrop-blur-xl p-2.5 rounded-full flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-container text-xl">search</span>
+<span class="text-xs text-on-surface/60">Konum ara...</span>
+</div>
+</div>
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+<div class="w-10 h-10 bg-primary-container rounded-full flex items-center justify-center shadow-lg">
+<span class="material-symbols-outlined text-on-primary-container text-xl" style="font-variation-settings: 'FILL' 1;">location_on</span>
+</div>
+</div>
+<div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-surface-container-lowest to-transparent">
+<div class="bg-surface-container p-4 rounded-2xl space-y-3">
+<h4 class="font-headline font-bold text-xs text-on-surface">Yakın Konumlar</h4>
+<div class="space-y-2">
+<div class="flex items-center gap-3 p-2 bg-surface-container-high rounded-lg">
+<div class="w-8 h-8 bg-primary-container/10 rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-primary-container text-sm">home_pin</span>
+</div>
+<div>
+<p class="font-body font-bold text-[10px] text-on-surface">Sultanahmet Meydanı</p>
+<p class="font-label text-[8px] text-secondary">0.2 km uzaklıkta</p>
+</div>
+</div>
+<div class="flex items-center gap-3 p-2">
+<div class="w-8 h-8 bg-surface-variant rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary text-sm">map</span>
+</div>
+<div>
+<p class="font-body font-bold text-[10px] text-on-surface">Yerebatan Sarnıcı</p>
+<p class="font-label text-[8px] text-secondary">0.5 km uzaklıkta</p>
+</div>
+</div>
+</div>
+</div>
+</div>
 </div>
 </div>
 </div>

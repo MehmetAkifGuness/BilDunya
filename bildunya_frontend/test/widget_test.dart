@@ -19,6 +19,7 @@ void main() {
     await tester.pumpWidget(
       MultiProvider(
         providers: [
+          Provider<ContentRepository>.value(value: contentRepository),
           ChangeNotifierProvider(create: (_) => AuthProvider(authRepository)),
           ChangeNotifierProvider(create: (_) => ContentsProvider(contentRepository)),
         ],

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../data/models/content_dto.dart';
+import '../../../data/models/create_content_request.dart';
 import '../../../data/repositories/content_repository.dart';
 
 class ContentsProvider extends ChangeNotifier {
@@ -15,6 +16,36 @@ class ContentsProvider extends ChangeNotifier {
   bool loadingVerified = false;
   String? nearbyError;
   String? verifiedError;
+
+  bool uploadingContent = false;
+
+  Future<ContentDto> fetchContentById(int id) => _repository.getContentById(id);
+
+  Future<String?> uploadContent({
+    required CreateContentRequest request,
+    required String imagePath,
+  }) async {
+    uploadingContent = true;
+    notifyListeners();
+    try {
+      await _repository.createContentWithFile(
+        request: request,
+        filePath: imagePath,
+      );
+      await loadVerified();
+      await loadNearby(
+        latitude: 38.6431,
+        longitude: 34.8282,
+        radiusKm: 40,
+      );
+      return null;
+    } catch (e) {
+      return e.toString();
+    } finally {
+      uploadingContent = false;
+      notifyListeners();
+    }
+  }
 
   Future<void> loadNearby({
     required double latitude,
