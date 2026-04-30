@@ -9,11 +9,13 @@ class OutlineAuthButton extends StatelessWidget {
     required this.label,
     this.onPressed,
     this.height = 64,
+    this.isLoading = false,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final double height;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +25,7 @@ class OutlineAuthButton extends StatelessWidget {
       height: height,
       width: double.infinity,
       child: OutlinedButton(
-        onPressed: onPressed,
+        onPressed: isLoading ? null : onPressed,
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.primaryContainer,
           side: BorderSide(
@@ -35,14 +37,23 @@ class OutlineAuthButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(AppRadii.lg),
           ),
         ),
-        child: Text(
-          label,
-          style: theme.textTheme.labelLarge?.copyWith(
-            color: AppColors.primaryContainer,
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
+        child: isLoading
+            ? const SizedBox(
+                width: 26,
+                height: 26,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: AppColors.primaryContainer,
+                ),
+              )
+            : Text(
+                label,
+                style: theme.textTheme.labelLarge?.copyWith(
+                  color: AppColors.primaryContainer,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
       ),
     );
   }

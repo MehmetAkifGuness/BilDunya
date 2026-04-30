@@ -2,6 +2,8 @@ package com.bildunya.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "users", uniqueConstraints = {
@@ -49,5 +51,6 @@ public class User extends BaseEntity {
     private String phoneNumber;
 
     @Column(name = "location_preferences", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String locationPreferences;
 }

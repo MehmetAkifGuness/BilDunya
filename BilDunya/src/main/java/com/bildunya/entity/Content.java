@@ -2,6 +2,8 @@ package com.bildunya.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "contents", indexes = {
@@ -39,6 +41,7 @@ public class Content extends BaseEntity {
     private String locationName;
 
     @Column(name = "exif_data", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String exifData;
 
     @Column(name = "is_verified", nullable = false)

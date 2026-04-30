@@ -11,11 +11,13 @@ class GradientAuthButton extends StatelessWidget {
     this.height = 56,
     this.begin = Alignment.centerLeft,
     this.end = Alignment.centerRight,
+    this.isLoading = false,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final double height;
+  final bool isLoading;
   final Alignment begin;
   final Alignment end;
 
@@ -26,7 +28,7 @@ class GradientAuthButton extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onPressed,
+        onTap: isLoading ? null : onPressed,
         borderRadius: BorderRadius.circular(AppRadii.lg),
         child: Ink(
           width: double.infinity,
@@ -47,14 +49,23 @@ class GradientAuthButton extends StatelessWidget {
             ],
           ),
           child: Center(
-            child: Text(
-              label,
-              style: theme.textTheme.labelLarge?.copyWith(
-                color: AppColors.onPrimary,
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+            child: isLoading
+                ? const SizedBox(
+                    width: 26,
+                    height: 26,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: AppColors.onPrimary,
+                    ),
+                  )
+                : Text(
+                    label,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: AppColors.onPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
           ),
         ),
       ),

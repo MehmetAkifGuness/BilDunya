@@ -1,14 +1,50 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../providers/auth_provider.dart';
 import '../widgets/gradient_auth_button.dart';
 import '../widgets/splash_page_indicator.dart';
+import '../../shell/main_shell.dart';
+import 'login_screen.dart';
 
-class SplashScreen extends StatelessWidget {
+class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
   static const String routeName = '/';
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  bool _navigated = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _tryAutoLogin());
+  }
+
+  Future<void> _tryAutoLogin() async {
+    final auth = context.read<AuthProvider>();
+    await auth.restoreSession();
+    if (!mounted || _navigated) return;
+    if (auth.isAuthenticated) {
+      _navigated = true;
+      Navigator.of(context).pushReplacementNamed(MainShell.routeName);
+    }
+  }
+
+  void _onExplore() {
+    final auth = context.read<AuthProvider>();
+    if (auth.isAuthenticated) {
+      Navigator.of(context).pushReplacementNamed(MainShell.routeName);
+    } else {
+      Navigator.of(context).pushNamed(LoginScreen.routeName);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -101,9 +137,7 @@ class SplashScreen extends StatelessWidget {
                   GradientAuthButton(
                     label: 'Keşfetmeye Başla',
                     height: 56,
-                    onPressed: () {
-                      Navigator.of(context).pushNamed('/login');
-                    },
+                    onPressed: _onExplore,
                   ),
                   const Spacer(flex: 3),
                 ],
