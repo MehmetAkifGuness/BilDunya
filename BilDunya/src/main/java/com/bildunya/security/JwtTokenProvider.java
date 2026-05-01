@@ -9,6 +9,8 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
+import java.util.Locale;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -20,11 +22,14 @@ public class JwtTokenProvider {
     @Value("${jwt.expiration}")
     private long jwtExpiration;
 
-    public String generateToken(String username) {
+    public String generateToken(String username, String role, long tokenVersion) {
         SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
 
         return Jwts.builder()
                 .setSubject(username)
+                .claim("role", role == null ? "USER" : role.trim().toUpperCase(Locale.ROOT))
+                .claim("ver", tokenVersion)
+                .claim("jti", UUID.randomUUID().toString())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + jwtExpiration))
                 .signWith(key)
@@ -32,29 +37,41 @@ public class JwtTokenProvider {
     }
 
     public String getUsernameFromToken(String token) {
-        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
+        return parseClaims(token).getSubject();
+    }
 
-        Claims claims = Jwts.parser()
-                .verifyWith(key)
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
+    public String getRoleFromToken(String token) {
+        Object role = parseClaims(token).get("role");
+        return role == null ? "USER" : role.toString();
+    }
 
-        return claims.getSubject();
+    public long getTokenVersionFromToken(String token) {
+        Object ver = parseClaims(token).get("ver");
+        if (ver instanceof Number number) {
+            return number.longValue();
+        }
+        try {
+            return ver == null ? 0L : Long.parseLong(ver.toString());
+        } catch (Exception ignored) {
+            return 0L;
+        }
     }
 
     public boolean validateToken(String token) {
         try {
-            SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
-
-            Jwts.parser()
-                    .verifyWith(key)
-                    .build()
-                    .parseSignedClaims(token);
-
+            parseClaims(token);
             return true;
         } catch (Exception ex) {
             return false;
         }
+    }
+
+    private Claims parseClaims(String token) {
+        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
+        return Jwts.parser()
+                .verifyWith(key)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
     }
 }

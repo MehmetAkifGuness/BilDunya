@@ -79,10 +79,9 @@ class _ContentDetailViewState extends State<ContentDetailView> {
     Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (ctx) => ChangeNotifierProvider(
-          create: (_) => CommentsProvider(
-            ctx.read<CommentRepository>(),
-            contentId: id,
-          )..load(),
+          create: (_) =>
+              CommentsProvider(ctx.read<CommentRepository>(), contentId: id)
+                ..load(),
           child: CommentsView(
             args: CommentsViewArgs(contentId: id, preview: c),
           ),
@@ -133,6 +132,14 @@ class _ContentDetailViewState extends State<ContentDetailView> {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
+  }
+
+  String _mapRejectionReason(String? rawReason) {
+    final reason = (rawReason ?? '').trim().toUpperCase();
+    if (reason == 'EXIF_LOCATION_MISMATCH') {
+      return 'EXIF GPS konumu, seçilen konum ile uyuşmuyor.';
+    }
+    return 'İçerik doğrulaması başarısız.';
   }
 
   @override
@@ -323,6 +330,37 @@ class _ContentDetailViewState extends State<ContentDetailView> {
                               labelStyle: theme.textTheme.labelSmall?.copyWith(
                                 color: AppColors.primaryContainer,
                                 fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          if (c.isVerified != true &&
+                              (c.verificationStatus ?? '')
+                                      .trim()
+                                      .toUpperCase() ==
+                                  'PENDING')
+                            Chip(
+                              label: const Text('Doğrulama bekliyor'),
+                              backgroundColor: AppColors.surfaceContainerHigh,
+                              labelStyle: theme.textTheme.labelSmall?.copyWith(
+                                color: AppColors.secondary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          if ((c.verificationStatus ?? '')
+                                  .trim()
+                                  .toUpperCase() ==
+                              'REJECTED')
+                            Tooltip(
+                              message: _mapRejectionReason(c.rejectionReason),
+                              child: Chip(
+                                label: const Text('Doğrulama hatalı'),
+                                backgroundColor: AppColors.error.withValues(
+                                  alpha: 0.18,
+                                ),
+                                labelStyle: theme.textTheme.labelSmall
+                                    ?.copyWith(
+                                      color: AppColors.error,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                               ),
                             ),
                         ],

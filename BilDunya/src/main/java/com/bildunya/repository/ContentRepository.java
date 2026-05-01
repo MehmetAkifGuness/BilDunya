@@ -18,6 +18,10 @@ public interface ContentRepository extends JpaRepository<Content, Long> {
 
     Page<Content> findByIsDeletedFalse(Pageable pageable);
 
+    Page<Content> findByVerificationStatusAndIsDeletedFalse(String verificationStatus, Pageable pageable);
+
+    Page<Content> findByIsDeletedFalseAndVerificationStatusNot(String verificationStatus, Pageable pageable);
+
     @Query(value = "SELECT * FROM contents c " +
             "WHERE c.is_deleted = false AND " +
             "c.latitude BETWEEN :minLat AND :maxLat AND " +

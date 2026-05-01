@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../core/constants/api_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radii.dart';
+import '../../core/widgets/content_verification_badge.dart';
 import '../../data/models/content_dto.dart';
 import '../content/providers/contents_provider.dart';
 import '../content/screens/content_detail_view.dart';
@@ -97,12 +98,12 @@ class _FeedPostCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final author = content.user?.displayName ?? 'Zeynep Yılmaz';
+    final author = content.user?.displayName ?? 'Gezgin';
     final avatarUrl = ApiConfig.resolveFileUrl(content.user?.profilePhotoUrl);
     final imageUrl = ApiConfig.resolveFileUrl(content.fileUrl);
     final body = content.description?.trim().isNotEmpty == true
         ? content.description!
-        : 'Kapadokya gün batımında büyülü anlar… Peri bacaları ve sıcak hava balonlarıyla unutulmaz bir akşam.';
+        : 'Bu içerik için açıklama yok.';
 
     return Material(
       color: Colors.transparent,
@@ -165,10 +166,17 @@ class _FeedPostCard extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            content.locationName ?? 'Kapadokya · Göreme',
+                            content.locationName ?? '-',
                             style: theme.textTheme.labelMedium?.copyWith(
                               color: AppColors.secondary,
                             ),
+                          ),
+                          const SizedBox(height: 6),
+                          ContentVerificationBadge(
+                            verificationStatus: content.verificationStatus,
+                            isVerified: content.isVerified,
+                            rejectionReason: content.rejectionReason,
+                            compact: true,
                           ),
                         ],
                       ),

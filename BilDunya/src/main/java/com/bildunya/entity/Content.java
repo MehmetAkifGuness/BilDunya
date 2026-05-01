@@ -9,7 +9,10 @@ import org.hibernate.type.SqlTypes;
 @Table(name = "contents", indexes = {
         @Index(name = "idx_content_user_id", columnList = "user_id"),
         @Index(name = "idx_latitude_longitude", columnList = "latitude,longitude"),
-        @Index(name = "idx_created_at", columnList = "created_at")
+        @Index(name = "idx_created_at", columnList = "created_at"),
+        @Index(name = "idx_verification_status", columnList = "verification_status"),
+        @Index(name = "idx_share_type", columnList = "share_type"),
+        @Index(name = "idx_content_deleted_verif_created", columnList = "is_deleted,verification_status,created_at")
 })
 @Data
 @NoArgsConstructor

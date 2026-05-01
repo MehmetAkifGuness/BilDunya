@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../core/constants/api_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radii.dart';
+import '../../core/widgets/content_verification_badge.dart';
 import '../../data/models/content_dto.dart';
 import '../content/providers/contents_provider.dart';
 import '../content/screens/content_detail_view.dart';
@@ -130,8 +131,7 @@ class _MapViewState extends State<MapView> {
       return;
     }
     final sel = _selected;
-    final ok =
-        sel != null && points.any((e) => e.id != null && e.id == sel.id);
+    final ok = sel != null && points.any((e) => e.id != null && e.id == sel.id);
     if (!ok) {
       _selected = points.first;
     }
@@ -318,7 +318,9 @@ class _MapViewState extends State<MapView> {
               content: _selected,
               loading: _contents.loadingNearby,
               error: _contents.nearbyError,
-              onExplore: _selected == null ? null : () => _openDetail(_selected!),
+              onExplore: _selected == null
+                  ? null
+                  : () => _openDetail(_selected!),
             ),
           ),
         ],
@@ -504,6 +506,13 @@ class _BottomPreviewCard extends StatelessWidget {
                       color: AppColors.onSurface,
                       fontWeight: FontWeight.w800,
                     ),
+                  ),
+                  const SizedBox(height: 6),
+                  ContentVerificationBadge(
+                    verificationStatus: c.verificationStatus,
+                    isVerified: c.isVerified,
+                    rejectionReason: c.rejectionReason,
+                    compact: true,
                   ),
                   const SizedBox(height: 4),
                   Text(

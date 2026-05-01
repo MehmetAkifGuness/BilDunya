@@ -2,6 +2,7 @@ package com.bildunya.controller;
 
 import com.bildunya.dto.ContentDto;
 import com.bildunya.dto.CreateContentRequest;
+import com.bildunya.dto.ModerateContentRequest;
 import com.bildunya.security.UserPrincipal;
 import com.bildunya.service.ContentService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -103,6 +104,58 @@ public class ContentController {
         Page<ContentDto> contents = contentService.getVerifiedContent(pageable);
 
         return ResponseEntity.ok(contents);
+    }
+
+    @GetMapping("/recommended")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @Operation(summary = "Get personalized recommended content")
+    public ResponseEntity<Page<ContentDto>> getRecommendedContent(
+            Authentication authentication,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "20") Integer size) {
+
+        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Page<ContentDto> contents = contentService.getRecommendedForUser(
+                principal.getUsername(),
+                pageable);
+
+        return ResponseEntity.ok(contents);
+    }
+
+    @GetMapping("/moderation/queue")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @Operation(summary = "Get moderation queue by verification status (moderator only)")
+    public ResponseEntity<Page<ContentDto>> getModerationQueue(
+            Authentication authentication,
+            @RequestParam(defaultValue = "PENDING") String verificationStatus,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "20") Integer size) {
+
+        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Page<ContentDto> contents = contentService.getContentByVerificationStatusForModeration(
+                principal.getUsername(),
+                verificationStatus,
+                pageable);
+
+        return ResponseEntity.ok(contents);
+    }
+
+    @PatchMapping("/{id}/moderation")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @Operation(summary = "Approve or reject a content (moderator only)")
+    public ResponseEntity<ContentDto> moderateContent(
+            Authentication authentication,
+            @PathVariable Long id,
+            @Valid @RequestBody ModerateContentRequest request) {
+
+        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
+        ContentDto content = contentService.moderateContent(
+                principal.getUsername(),
+                id,
+                request);
+        return ResponseEntity.ok(content);
     }
 
     @GetMapping("/user/{userId}")

@@ -11,11 +11,14 @@ class ContentsProvider extends ChangeNotifier {
 
   List<ContentDto> nearby = [];
   List<ContentDto> verified = [];
+  List<ContentDto> recommended = [];
 
   bool loadingNearby = false;
   bool loadingVerified = false;
+  bool loadingRecommended = false;
   String? nearbyError;
   String? verifiedError;
+  String? recommendedError;
 
   bool uploadingContent = false;
 
@@ -23,21 +26,18 @@ class ContentsProvider extends ChangeNotifier {
 
   Future<String?> uploadContent({
     required CreateContentRequest request,
-    required String imagePath,
+    required String mediaPath,
   }) async {
     uploadingContent = true;
     notifyListeners();
     try {
       await _repository.createContentWithFile(
         request: request,
-        filePath: imagePath,
+        filePath: mediaPath,
       );
       await loadVerified();
-      await loadNearby(
-        latitude: 38.6431,
-        longitude: 34.8282,
-        radiusKm: 40,
-      );
+      await loadRecommended();
+      await loadNearby(latitude: 38.6431, longitude: 34.8282, radiusKm: 40);
       return null;
     } catch (e) {
       return e.toString();
@@ -83,6 +83,22 @@ class ContentsProvider extends ChangeNotifier {
       verified = [];
     } finally {
       loadingVerified = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadRecommended() async {
+    loadingRecommended = true;
+    recommendedError = null;
+    notifyListeners();
+    try {
+      final page = await _repository.getRecommended();
+      recommended = page.content;
+    } catch (e) {
+      recommendedError = e.toString();
+      recommended = [];
+    } finally {
+      loadingRecommended = false;
       notifyListeners();
     }
   }

@@ -211,6 +211,11 @@ JSONB = PostgreSQL JSON type
 }
 ```
 
+**Notes**
+- `share_type = "ANONYMOUS"` olduÄŸunda API, `user` bilgisini maskeler (Ã¶rn. `username="anonymous"`, `full_name="Anonim"`, `id=null`).
+- EXIF GPS analizi `contents.exif_data` (JSONB) alanÄ±nda saklanÄ±r. Ã–rnek alanlar: `analysisVersion`, `gpsLatitude`, `gpsLongitude`, `providedLatitude`, `providedLongitude`, `distanceKm`, `thresholdKm`, `locationMatch`.
+- `locationMatch=true` ise iÃ§erik otomatik `VERIFIED` olur; aksi halde `PENDING` kalÄ±r (manuel inceleme iÃ§in).
+
 ## Performance Optimization Strategy
 
 ### Indexes

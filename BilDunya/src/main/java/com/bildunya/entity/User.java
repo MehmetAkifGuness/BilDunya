@@ -50,6 +50,12 @@ public class User extends BaseEntity {
     @Column(name = "phone_number")
     private String phoneNumber;
 
+    @Column(name = "role")
+    private String role;
+
+    @Column(name = "token_version")
+    private Long tokenVersion = 0L;
+
     @Column(name = "location_preferences", columnDefinition = "jsonb")
     @JdbcTypeCode(SqlTypes.JSON)
     private String locationPreferences;

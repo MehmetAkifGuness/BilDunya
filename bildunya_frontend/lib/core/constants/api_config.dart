@@ -1,9 +1,10 @@
-/// Spring Boot `server.servlet.context-path=/api` + Android emülatör loopback.
+/// Spring Boot `server.servlet.context-path=/api` + Android emülatör/fiziksel cihaz bağlantısı.
 abstract final class ApiConfig {
   /// Tam API kökü (Dio `baseUrl`).
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:8080/api',
+    // DEĞİŞEN KISIM BURASI: localhost yerine senin IP adresin yazıldı.
+    defaultValue: 'http://10.36.224.163:8080/api',
   );
 
   /// `fileUrl` gibi `/api/uploads/...` path'leri için şema + host (context'siz kök).
@@ -17,7 +18,6 @@ abstract final class ApiConfig {
   }
 
   /// STOMP native WebSocket URL (`server.servlet.context-path` + `/ws`).
-  /// Örn. `API_BASE_URL=http://10.0.2.2:8080/api` → `ws://10.0.2.2:8080/api/ws`
   static String get stompWsUrl {
     const fromEnv = String.fromEnvironment('API_WS_URL', defaultValue: '');
     if (fromEnv.isNotEmpty) return fromEnv;

@@ -7,6 +7,7 @@ import 'package:http_parser/http_parser.dart';
 import '../../core/network/dio_error_message.dart';
 import '../models/content_dto.dart';
 import '../models/create_content_request.dart';
+import '../models/moderate_content_request.dart';
 import '../models/page_response.dart';
 
 class ContentRepository {
@@ -44,7 +45,7 @@ class ContentRepository {
         'file': await MultipartFile.fromFile(
           filePath,
           filename: name,
-          contentType: _imageMediaType(name),
+          contentType: _mediaType(name),
         ),
       });
 
@@ -60,8 +61,12 @@ class ContentRepository {
     }
   }
 
-  static MediaType _imageMediaType(String filename) {
+  static MediaType _mediaType(String filename) {
     final lower = filename.toLowerCase();
+    if (lower.endsWith('.mp4')) return MediaType('video', 'mp4');
+    if (lower.endsWith('.mov')) return MediaType('video', 'quicktime');
+    if (lower.endsWith('.m4v')) return MediaType('video', 'x-m4v');
+    if (lower.endsWith('.webm')) return MediaType('video', 'webm');
     if (lower.endsWith('.png')) return MediaType('image', 'png');
     if (lower.endsWith('.webp')) return MediaType('image', 'webp');
     if (lower.endsWith('.gif')) return MediaType('image', 'gif');
@@ -71,10 +76,7 @@ class ContentRepository {
     return MediaType('image', 'jpeg');
   }
 
-  Future<PagedContentResult> getVerified({
-    int page = 0,
-    int size = 20,
-  }) async {
+  Future<PagedContentResult> getVerified({int page = 0, int size = 20}) async {
     try {
       final res = await _dio.get<Map<String, dynamic>>(
         '/contents/verified',
@@ -82,6 +84,23 @@ class ContentRepository {
       );
       final body = res.data;
       if (body == null) throw Exception('Boş yanıt');
+      return PagedContentResult.fromJson(body);
+    } on DioException catch (e) {
+      throw Exception(dioErrorMessage(e));
+    }
+  }
+
+  Future<PagedContentResult> getRecommended({
+    int page = 0,
+    int size = 20,
+  }) async {
+    try {
+      final res = await _dio.get<Map<String, dynamic>>(
+        '/contents/recommended',
+        queryParameters: {'page': page, 'size': size},
+      );
+      final body = res.data;
+      if (body == null) throw Exception('BoÅŸ yanÄ±t');
       return PagedContentResult.fromJson(body);
     } on DioException catch (e) {
       throw Exception(dioErrorMessage(e));
@@ -129,6 +148,45 @@ class ContentRepository {
       final body = res.data;
       if (body == null) throw Exception('Boş yanıt');
       return PagedContentResult.fromJson(body);
+    } on DioException catch (e) {
+      throw Exception(dioErrorMessage(e));
+    }
+  }
+
+  Future<PagedContentResult> getModerationQueue({
+    String verificationStatus = 'PENDING',
+    int page = 0,
+    int size = 20,
+  }) async {
+    try {
+      final res = await _dio.get<Map<String, dynamic>>(
+        '/contents/moderation/queue',
+        queryParameters: {
+          'verificationStatus': verificationStatus,
+          'page': page,
+          'size': size,
+        },
+      );
+      final body = res.data;
+      if (body == null) throw Exception('Boş yanıt');
+      return PagedContentResult.fromJson(body);
+    } on DioException catch (e) {
+      throw Exception(dioErrorMessage(e));
+    }
+  }
+
+  Future<ContentDto> moderateContent({
+    required int contentId,
+    required ModerateContentRequest request,
+  }) async {
+    try {
+      final res = await _dio.patch<Map<String, dynamic>>(
+        '/contents/$contentId/moderation',
+        data: request.toJson(),
+      );
+      final body = res.data;
+      if (body == null) throw Exception('Boş yanıt');
+      return ContentDto.fromJson(body);
     } on DioException catch (e) {
       throw Exception(dioErrorMessage(e));
     }

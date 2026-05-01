@@ -194,6 +194,13 @@ Tüm korumalı endpoint'ler için:
 Authorization: Bearer {token}
 ```
 
+### Security & Privacy (Backend)
+- `POST /api/auth/login` ve `POST /api/auth/register` istekleri basit IP bazlÄ± rate-limit ile korunur.
+- Parola politikasÄ±: en az 8 karakter, bÃ¼yÃ¼k/kÃ¼Ã§Ã¼k harf + rakam iÃ§ermeli; BCrypt iÃ§in 72 byte Ã¼zeri parolalar reddedilir.
+- Ä°Ã§erik oluÅŸturmada `contentType` / `shareType` / koordinatlar (lat/lon) doÄŸrulanÄ±r; dosya yÃ¼klemelerinde dosya tipi `contentType` ile uyumlu olmalÄ±dÄ±r.
+- EXIF GPS bulunan gÃ¶rsellerde `exif_data` iÃ§inde konum eÅŸleÅŸtirme analizi saklanÄ±r (mesafe, eÅŸik vb.).
+- `share_type=ANONYMOUS` iÃ§eriklerde kullanÄ±cÄ± bilgileri maskelenir; iÃ§erik ve yorum listelerinde email/telefon dÃ¶nÃ¼lmez.
+
 ### Hata Yanıtları
 ```json
 {

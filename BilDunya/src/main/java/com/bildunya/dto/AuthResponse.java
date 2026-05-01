@@ -21,6 +21,12 @@ public class AuthResponse {
     @JsonProperty("expires_in")
     private Long expiresIn;
 
+    @JsonProperty("refresh_token")
+    private String refreshToken;
+
+    @JsonProperty("refresh_expires_in")
+    private Long refreshExpiresIn;
+
     @JsonProperty("user")
     private UserDto user;
 }

@@ -5,13 +5,14 @@ import 'package:provider/provider.dart';
 import '../../core/constants/api_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radii.dart';
+import '../../core/widgets/content_verification_badge.dart';
 import '../../data/models/content_dto.dart';
-import '../content/screens/content_detail_view.dart';
 import '../auth/providers/auth_provider.dart';
 import '../auth/screens/login_screen.dart';
 import '../content/providers/contents_provider.dart';
+import '../content/screens/content_detail_view.dart';
 
-/// Ana sayfa: karşılama + popüler bölgeler + yakındaki içerikler (API).
+/// Ana sayfa: karşılama + popüler bölgeler + önerilen / yakın içerikler.
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
 
@@ -32,12 +33,18 @@ class _HomeViewState extends State<HomeView> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ContentsProvider>().loadNearby(
-            latitude: 38.6431,
-            longitude: 34.8282,
-            radiusKm: 40,
-          );
+      _refreshAll();
     });
+  }
+
+  Future<void> _refreshAll() async {
+    final provider = context.read<ContentsProvider>();
+    await provider.loadRecommended();
+    await provider.loadNearby(
+      latitude: 38.6431,
+      longitude: 34.8282,
+      radiusKm: 40,
+    );
   }
 
   @override
@@ -45,6 +52,12 @@ class _HomeViewState extends State<HomeView> {
     final theme = Theme.of(context);
     final auth = context.watch<AuthProvider>();
     final contents = context.watch<ContentsProvider>();
+
+    final recommendedEmpty = contents.recommended.isEmpty;
+    final listToShow = recommendedEmpty
+        ? contents.nearby
+        : contents.recommended;
+    final loading = contents.loadingRecommended || contents.loadingNearby;
 
     return Scaffold(
       backgroundColor: AppColors.surfaceContainerLowest,
@@ -73,11 +86,7 @@ class _HomeViewState extends State<HomeView> {
       ),
       body: RefreshIndicator(
         color: AppColors.primaryContainer,
-        onRefresh: () => context.read<ContentsProvider>().loadNearby(
-              latitude: 38.6431,
-              longitude: 34.8282,
-              radiusKm: 40,
-            ),
+        onRefresh: _refreshAll,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
           children: [
@@ -132,18 +141,30 @@ class _HomeViewState extends State<HomeView> {
                 },
               ),
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 22),
+            if ((auth.user?.locationPreferences ?? '').trim().isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Text(
+                  'Tercihlerin: ${auth.user!.locationPreferences}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppColors.secondary,
+                  ),
+                ),
+              ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Yakınındaki içerikler',
+                  recommendedEmpty
+                      ? 'Yakınındaki içerikler'
+                      : 'Sana önerilen içerikler',
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: AppColors.onSurface,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                if (contents.loadingNearby)
+                if (loading)
                   const SizedBox(
                     width: 22,
                     height: 22,
@@ -152,9 +173,19 @@ class _HomeViewState extends State<HomeView> {
               ],
             ),
             const SizedBox(height: 12),
+            if (recommendedEmpty && contents.recommendedError != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  contents.recommendedError!,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppColors.error,
+                  ),
+                ),
+              ),
             if (contents.nearbyError != null)
               Padding(
-                padding: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.only(bottom: 8),
                 child: Text(
                   contents.nearbyError!,
                   style: theme.textTheme.bodySmall?.copyWith(
@@ -162,13 +193,13 @@ class _HomeViewState extends State<HomeView> {
                   ),
                 ),
               ),
-            ...contents.nearby.map((c) => _NearbyTile(content: c)),
-            if (!contents.loadingNearby && contents.nearby.isEmpty)
+            ...listToShow.map((c) => _NearbyTile(content: c)),
+            if (!loading && listToShow.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 24),
                 child: Center(
                   child: Text(
-                    'Henüz yakın içerik yok veya sunucuya erişilemiyor.',
+                    'Öneri bulunamadı; tercihlerini profilden güncelleyebilirsin.',
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: AppColors.secondary,
@@ -191,10 +222,9 @@ class _NearbyTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final title =
-        content.locationName?.trim().isNotEmpty == true
-            ? content.locationName!
-            : (content.description ?? 'İçerik').split('\n').first;
+    final title = content.locationName?.trim().isNotEmpty == true
+        ? content.locationName!
+        : (content.description ?? 'İçerik').split('\n').first;
     final thumb = ApiConfig.resolveFileUrl(content.fileUrl);
 
     return Card(
@@ -217,10 +247,14 @@ class _NearbyTile extends StatelessWidget {
                 ? Image.network(
                     thumb,
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => const ColoredBox(
-                      color: AppColors.surfaceVariant,
-                      child: Icon(Symbols.image, color: AppColors.secondary),
-                    ),
+                    errorBuilder: (context, error, stackTrace) =>
+                        const ColoredBox(
+                          color: AppColors.surfaceVariant,
+                          child: Icon(
+                            Symbols.image,
+                            color: AppColors.secondary,
+                          ),
+                        ),
                   )
                 : const ColoredBox(
                     color: AppColors.surfaceVariant,
@@ -238,12 +272,28 @@ class _NearbyTile extends StatelessWidget {
           ),
         ),
         subtitle: Text(
-          content.user?.displayName ?? '',
+          content.user?.displayName.trim().isNotEmpty == true
+              ? content.user!.displayName
+              : '-',
           style: theme.textTheme.bodySmall?.copyWith(
             color: AppColors.secondary,
           ),
         ),
-        trailing: const Icon(Symbols.chevron_right, color: AppColors.secondary),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            ContentVerificationBadge(
+              verificationStatus: content.verificationStatus,
+              isVerified: content.isVerified,
+              rejectionReason: content.rejectionReason,
+              compact: true,
+            ),
+            const SizedBox(height: 4),
+            const Icon(Symbols.chevron_right, color: AppColors.secondary),
+          ],
+        ),
+        minVerticalPadding: 8,
         onTap: () {
           final id = content.id;
           if (id == null) return;

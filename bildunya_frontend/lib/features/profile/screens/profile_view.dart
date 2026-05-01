@@ -8,14 +8,19 @@ import 'package:provider/provider.dart';
 import '../../../core/constants/api_config.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radii.dart';
+import '../../../core/utils/app_snackbar.dart';
 import '../../../data/models/content_dto.dart';
 import '../../../data/models/user_dto.dart';
 import '../../../data/models/user_gamification_dto.dart';
+import '../../../data/repositories/content_repository.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../content/screens/content_detail_view.dart';
+import '../../moderation/providers/moderation_provider.dart';
+import '../../moderation/screens/moderation_queue_view.dart';
 import '../providers/profile_provider.dart';
 import 'achievements_view.dart';
+import 'profile_edit_view.dart';
 
 /// Varsayılan unvan (code.html — bio boşken).
 const String kDefaultProfileTagline = 'Kaşif & Tarih Meraklısı';
@@ -66,9 +71,7 @@ class _ProfileViewState extends State<ProfileView>
     if (!auth.isAuthenticated) {
       return Scaffold(
         backgroundColor: AppColors.surfaceContainerLowest,
-        appBar: AppBar(
-          title: const Text('Profil'),
-        ),
+        appBar: AppBar(title: const Text('Profil')),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(32),
@@ -78,9 +81,9 @@ class _ProfileViewState extends State<ProfileView>
                 Text(
                   'Profilini görmek için giriş yap.',
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: AppColors.secondary,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyLarge?.copyWith(color: AppColors.secondary),
                 ),
                 const SizedBox(height: 24),
                 DecoratedBox(
@@ -93,9 +96,9 @@ class _ProfileViewState extends State<ProfileView>
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: () => Navigator.of(context).pushNamed(
-                        LoginScreen.routeName,
-                      ),
+                      onTap: () => Navigator.of(
+                        context,
+                      ).pushNamed(LoginScreen.routeName),
                       borderRadius: BorderRadius.circular(AppRadii.md),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
@@ -104,7 +107,8 @@ class _ProfileViewState extends State<ProfileView>
                         ),
                         child: Text(
                           'Giriş yap',
-                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          style: Theme.of(context).textTheme.labelLarge
+                              ?.copyWith(
                                 color: AppColors.onPrimary,
                                 fontWeight: FontWeight.w800,
                               ),
@@ -142,9 +146,9 @@ class _ProfileViewState extends State<ProfileView>
                     Text(
                       profile.error!,
                       textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppColors.error,
-                          ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(color: AppColors.error),
                     ),
                     const SizedBox(height: 16),
                     FilledButton(
@@ -166,6 +170,8 @@ class _ProfileViewState extends State<ProfileView>
             body: const Center(child: Text('Profil yüklenemedi.')),
           );
         }
+        final role = (user.role ?? '').trim().toUpperCase();
+        final isModerator = role == 'ADMIN' || role == 'MODERATOR';
 
         return Scaffold(
           backgroundColor: AppColors.surfaceContainerLowest,
@@ -176,6 +182,36 @@ class _ProfileViewState extends State<ProfileView>
                 user: user,
                 gamification: profile.gamification,
                 fallbackPostCount: profile.myContents.length,
+                isAnonymous: user.isAnonymous == true,
+                updatingAnonymous: profile.updatingAnonymous,
+                onAnonymousChanged: (value) async {
+                  final err = await context
+                      .read<ProfileProvider>()
+                      .setAnonymous(value);
+                  if (!context.mounted || err == null) return;
+                  showAppSnackBar(context, err, isError: true);
+                },
+                onEditProfile: () {
+                  Navigator.of(context).push<void>(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const ProfileEditView(),
+                    ),
+                  );
+                },
+                onModerationQueue: isModerator
+                    ? () {
+                        Navigator.of(context).push<void>(
+                          MaterialPageRoute<void>(
+                            builder: (ctx) => ChangeNotifierProvider(
+                              create: (_) => ModerationProvider(
+                                ctx.read<ContentRepository>(),
+                              ),
+                              child: const ModerationQueueView(),
+                            ),
+                          ),
+                        );
+                      }
+                    : null,
                 onAchievements: () {
                   Navigator.of(context).push<void>(
                     MaterialPageRoute<void>(
@@ -189,13 +225,14 @@ class _ProfileViewState extends State<ProfileView>
                 child: TabBar(
                   controller: _tabs,
                   labelColor: AppColors.primary,
-                  unselectedLabelColor:
-                      AppColors.secondary.withValues(alpha: 0.45),
+                  unselectedLabelColor: AppColors.secondary.withValues(
+                    alpha: 0.45,
+                  ),
                   indicatorColor: AppColors.primary,
                   indicatorWeight: 2,
-                  labelStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                  labelStyle: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
                   tabs: const [
                     Tab(text: 'Paylaşımlar'),
                     Tab(text: 'Beğeniler'),
@@ -232,12 +269,22 @@ class _ProfileHeader extends StatelessWidget {
     required this.user,
     required this.gamification,
     required this.fallbackPostCount,
+    required this.isAnonymous,
+    required this.updatingAnonymous,
+    required this.onAnonymousChanged,
+    required this.onEditProfile,
+    required this.onModerationQueue,
     required this.onAchievements,
   });
 
   final UserDto user;
   final UserGamificationDto? gamification;
   final int fallbackPostCount;
+  final bool isAnonymous;
+  final bool updatingAnonymous;
+  final ValueChanged<bool> onAnonymousChanged;
+  final VoidCallback onEditProfile;
+  final VoidCallback? onModerationQueue;
   final VoidCallback onAchievements;
 
   @override
@@ -270,7 +317,11 @@ class _ProfileHeader extends StatelessWidget {
                         ? CachedNetworkImageProvider(coverUrl)
                         : null,
                     child: coverUrl.isEmpty
-                        ? const Icon(Symbols.person, size: 20, color: AppColors.secondary)
+                        ? const Icon(
+                            Symbols.person,
+                            size: 20,
+                            color: AppColors.secondary,
+                          )
                         : null,
                   ),
                   const SizedBox(width: 10),
@@ -284,8 +335,8 @@ class _ProfileHeader extends StatelessWidget {
                 ],
               ),
               IconButton(
-                onPressed: () {},
-                icon: const Icon(Symbols.search),
+                onPressed: onEditProfile,
+                icon: const Icon(Symbols.edit),
                 color: AppColors.primaryContainer,
               ),
             ],
@@ -300,12 +351,10 @@ class _ProfileHeader extends StatelessWidget {
                 CachedNetworkImage(
                   imageUrl: coverUrl,
                   fit: BoxFit.cover,
-                  placeholder: (context, url) => const ColoredBox(
-                    color: AppColors.surfaceContainer,
-                  ),
-                  errorWidget: (context, url, error) => const ColoredBox(
-                    color: AppColors.surfaceContainer,
-                  ),
+                  placeholder: (context, url) =>
+                      const ColoredBox(color: AppColors.surfaceContainer),
+                  errorWidget: (context, url, error) =>
+                      const ColoredBox(color: AppColors.surfaceContainer),
                 )
               else
                 Container(
@@ -404,11 +453,82 @@ class _ProfileHeader extends StatelessWidget {
                             ),
                           ),
                         ),
-                        const Icon(Symbols.chevron_right, color: AppColors.secondary),
+                        const Icon(
+                          Symbols.chevron_right,
+                          color: AppColors.secondary,
+                        ),
                       ],
                     ),
                   ),
                 ),
+              ),
+            ),
+          ),
+        ),
+        if (onModerationQueue != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+            child: Material(
+              color: AppColors.surfaceContainer,
+              borderRadius: BorderRadius.circular(AppRadii.md),
+              child: InkWell(
+                onTap: onModerationQueue,
+                borderRadius: BorderRadius.circular(AppRadii.md),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Symbols.admin_panel_settings,
+                        color: AppColors.primaryContainer,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Moderasyon Kuyruğu',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.onSurface,
+                          ),
+                        ),
+                      ),
+                      const Icon(
+                        Symbols.chevron_right,
+                        color: AppColors.secondary,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+          child: Material(
+            color: AppColors.surfaceContainer,
+            borderRadius: BorderRadius.circular(AppRadii.md),
+            child: SwitchListTile.adaptive(
+              value: isAnonymous,
+              onChanged: updatingAnonymous ? null : onAnonymousChanged,
+              title: Text(
+                'Anonim profil modu',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.onSurface,
+                ),
+              ),
+              subtitle: Text(
+                'Açıkken adın ve profilin içeriklerde gizlenir.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: AppColors.secondary,
+                ),
+              ),
+              activeThumbColor: AppColors.primaryContainer,
+              activeTrackColor: AppColors.primaryContainer.withValues(
+                alpha: 0.35,
               ),
             ),
           ),
@@ -466,9 +586,9 @@ class _PostsGrid extends StatelessWidget {
           Center(
             child: Text(
               'Henüz paylaşım yok.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.secondary,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppColors.secondary),
             ),
           ),
         ],
@@ -542,9 +662,9 @@ class _LikesPlaceholder extends StatelessWidget {
         Center(
           child: Text(
             'Beğeniler yakında.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.secondary,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppColors.secondary),
           ),
         ),
       ],

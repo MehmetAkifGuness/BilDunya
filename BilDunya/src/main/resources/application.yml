@@ -27,6 +27,9 @@ spring:
       max-file-size: 100MB
       max-request-size: 100MB
 
+  cache:
+    type: simple
+
 server:
   port: 8080
   servlet:
@@ -46,8 +49,17 @@ logging:
 
 # JWT Configuration
 jwt:
-  secret: "your-secret-key-change-this-in-production-at-least-32-characters-long"
-  expiration: 86400000 # 24 hours in milliseconds
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION:86400000} # 24 saat
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:2592000000} # 30 gün
+
+auth:
+  require-email-verification: ${AUTH_REQUIRE_EMAIL_VERIFICATION:false}
+
+security:
+  bootstrap-admin-usernames: ${BOOTSTRAP_ADMIN_USERNAMES:admin}
+  cors:
+    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173,http://localhost:8080,http://localhost:8081}
 
 # File Upload
 file:

@@ -20,7 +20,10 @@ public class UserDto {
     private String bio;
     private Boolean isAnonymous;
     private Boolean isActive;
+    private Boolean emailVerified;
+    private String role;
     private String phoneNumber;
+    private String locationPreferences;
 
     @JsonProperty("created_at")
     private String createdAt;

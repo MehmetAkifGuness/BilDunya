@@ -50,6 +50,12 @@ class AuthRepository {
 
   Future<void> _persist(AuthResponse auth) async {
     await _storage.write(key: SecureKeys.accessToken, value: auth.accessToken);
+    if (auth.refreshToken != null && auth.refreshToken!.isNotEmpty) {
+      await _storage.write(
+        key: SecureKeys.refreshToken,
+        value: auth.refreshToken,
+      );
+    }
     if (auth.user != null) {
       await _storage.write(
         key: SecureKeys.userJson,
@@ -58,13 +64,28 @@ class AuthRepository {
     }
   }
 
+  Future<void> logoutFromServer() async {
+    final refreshToken = await _storage.read(key: SecureKeys.refreshToken);
+    try {
+      await _dio.post<Map<String, dynamic>>(
+        '/auth/logout',
+        data: {'refreshToken': refreshToken},
+      );
+    } catch (_) {
+      // Local çıkış yine de yapılır.
+    }
+  }
+
   Future<void> clearSession() async {
     await _storage.delete(key: SecureKeys.accessToken);
+    await _storage.delete(key: SecureKeys.refreshToken);
     await _storage.delete(key: SecureKeys.userJson);
   }
 
-  Future<String?> readToken() =>
-      _storage.read(key: SecureKeys.accessToken);
+  Future<String?> readToken() => _storage.read(key: SecureKeys.accessToken);
+
+  Future<String?> readRefreshToken() =>
+      _storage.read(key: SecureKeys.refreshToken);
 
   Future<UserDto?> readCachedUser() async {
     final raw = await _storage.read(key: SecureKeys.userJson);

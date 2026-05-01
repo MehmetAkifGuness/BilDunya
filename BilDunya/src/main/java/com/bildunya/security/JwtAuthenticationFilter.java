@@ -1,5 +1,7 @@
 package com.bildunya.security;
 
+import com.bildunya.entity.User;
+import com.bildunya.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -12,12 +14,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
+import java.util.Locale;
 
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider tokenProvider;
+    private final UserRepository userRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
@@ -28,16 +32,42 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (jwt != null && tokenProvider.validateToken(jwt)) {
                 String username = tokenProvider.getUsernameFromToken(jwt);
+                String tokenRole = tokenProvider.getRoleFromToken(jwt);
+                long tokenVersion = tokenProvider.getTokenVersionFromToken(jwt);
 
-                UserPrincipal userPrincipal = new UserPrincipal(username);
-                Authentication authentication = new JwtAuthenticationToken(userPrincipal);
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                User user = userRepository.findByUsernameIgnoreCase(username).orElse(null);
+                if (user != null
+                        && !Boolean.TRUE.equals(user.getIsDeleted())
+                        && Boolean.TRUE.equals(user.getIsActive())) {
+
+                    long userVersion = user.getTokenVersion() == null ? 0L : user.getTokenVersion();
+                    if (tokenVersion == userVersion) {
+                        String userRole = normalizeRole(user.getRole());
+                        if (!normalizeRole(tokenRole).equals(userRole)) {
+                            userRole = normalizeRole(tokenRole);
+                        }
+                        UserPrincipal userPrincipal = new UserPrincipal(user.getUsername(), userRole);
+                        Authentication authentication = new JwtAuthenticationToken(userPrincipal);
+                        SecurityContextHolder.getContext().setAuthentication(authentication);
+                    }
+                }
             }
         } catch (Exception ex) {
             logger.error("Could not set user authentication", ex);
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private static String normalizeRole(String role) {
+        if (role == null || role.isBlank()) {
+            return "USER";
+        }
+        String normalized = role.trim().toUpperCase(Locale.ROOT);
+        return switch (normalized) {
+            case "ADMIN", "MODERATOR", "USER" -> normalized;
+            default -> "USER";
+        };
     }
 
     private String getJwtFromRequest(HttpServletRequest request) {

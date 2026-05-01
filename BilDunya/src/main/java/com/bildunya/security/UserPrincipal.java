@@ -10,4 +10,17 @@ import lombok.NoArgsConstructor;
 public class UserPrincipal {
 
     private String username;
+    private String role;
+
+    public boolean hasAnyRole(String... roles) {
+        if (role == null || roles == null) {
+            return false;
+        }
+        for (String required : roles) {
+            if (required != null && required.equalsIgnoreCase(role)) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

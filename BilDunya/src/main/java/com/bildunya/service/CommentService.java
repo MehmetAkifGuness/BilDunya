@@ -114,13 +114,13 @@ public class CommentService {
             userDto = UserDto.builder()
                     .id(user.getId())
                     .username(user.getUsername())
-                    .email(user.getEmail())
+                    .email(null) // avoid leaking private info in comments
                     .fullName(user.getFullName())
                     .profilePhotoUrl(user.getProfilePhotoUrl())
                     .bio(user.getBio())
                     .isAnonymous(user.getIsAnonymous())
                     .isActive(user.getIsActive())
-                    .phoneNumber(user.getPhoneNumber())
+                    .phoneNumber(null) // avoid leaking private info in comments
                     .createdAt(user.getCreatedAt() != null ? user.getCreatedAt().format(formatter) : null)
                     .build();
         }

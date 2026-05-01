@@ -1,4 +1,5 @@
 abstract final class SecureKeys {
   static const accessToken = 'access_token';
+  static const refreshToken = 'refresh_token';
   static const userJson = 'user_json';
 }

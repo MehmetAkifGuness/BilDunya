@@ -33,6 +33,12 @@ public class ContentDto {
     @JsonProperty("verification_status")
     private String verificationStatus;
 
+    @JsonProperty("rejection_reason")
+    private String rejectionReason;
+
+    @JsonProperty("exif_data")
+    private String exifData;
+
     @JsonProperty("view_count")
     private Long viewCount;
 

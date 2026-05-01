@@ -12,6 +12,8 @@ class ContentDto {
     this.locationName,
     this.isVerified,
     this.verificationStatus,
+    this.rejectionReason,
+    this.exifData,
     this.viewCount,
     this.shareType,
     this.tags,
@@ -28,6 +30,8 @@ class ContentDto {
   final String? locationName;
   final bool? isVerified;
   final String? verificationStatus;
+  final String? rejectionReason;
+  final String? exifData;
   final int? viewCount;
   final String? shareType;
   final String? tags;
@@ -38,24 +42,30 @@ class ContentDto {
     return ContentDto(
       id: (json['id'] as num?)?.toInt(),
       description: json['description'] as String?,
-      contentType: json['content_type'] as String? ?? json['contentType'] as String?,
+      contentType:
+          json['content_type'] as String? ?? json['contentType'] as String?,
       fileUrl: json['file_url'] as String? ?? json['fileUrl'] as String?,
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
       locationName:
           json['location_name'] as String? ?? json['locationName'] as String?,
       isVerified: json['is_verified'] as bool? ?? json['isVerified'] as bool?,
-      verificationStatus: json['verification_status'] as String? ??
+      verificationStatus:
+          json['verification_status'] as String? ??
           json['verificationStatus'] as String?,
-      viewCount: (json['view_count'] as num?)?.toInt() ??
+      rejectionReason:
+          json['rejection_reason'] as String? ??
+          json['rejectionReason'] as String?,
+      exifData: json['exif_data'] as String? ?? json['exifData'] as String?,
+      viewCount:
+          (json['view_count'] as num?)?.toInt() ??
           (json['viewCount'] as num?)?.toInt(),
       shareType: json['share_type'] as String? ?? json['shareType'] as String?,
       tags: json['tags'] as String?,
       user: json['user'] != null
           ? UserDto.fromJson(json['user'] as Map<String, dynamic>)
           : null,
-      createdAt:
-          json['created_at'] as String? ?? json['createdAt'] as String?,
+      createdAt: json['created_at'] as String? ?? json['createdAt'] as String?,
     );
   }
 }

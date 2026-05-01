@@ -14,7 +14,7 @@ import '../providers/contents_provider.dart';
 import '../../shell/main_shell.dart';
 import 'location_picker_view.dart';
 
-/// Paylaşım oluştur: fotoğraf, açıklama, konum (koyu tema).
+/// Paylaşım oluştur: fotoğraf/video, açıklama, konum (koyu tema).
 class CreateContentView extends StatefulWidget {
   const CreateContentView({super.key});
 
@@ -33,8 +33,10 @@ class _CreateContentViewState extends State<CreateContentView> {
 
   final _description = TextEditingController();
   final _picker = ImagePicker();
-  XFile? _image;
+  XFile? _mediaFile;
+  String _contentType = 'IMAGE';
   PickedLocation _location = _defaultLocation;
+  String _shareType = 'PUBLIC';
 
   @override
   void dispose() {
@@ -50,7 +52,23 @@ class _CreateContentViewState extends State<CreateContentView> {
       imageQuality: 88,
     );
     if (!mounted) return;
-    if (file != null) setState(() => _image = file);
+    if (file != null) {
+      setState(() {
+        _mediaFile = file;
+        _contentType = 'IMAGE';
+      });
+    }
+  }
+
+  Future<void> _pickVideo() async {
+    final file = await _picker.pickVideo(source: ImageSource.gallery);
+    if (!mounted) return;
+    if (file != null) {
+      setState(() {
+        _mediaFile = file;
+        _contentType = 'VIDEO';
+      });
+    }
   }
 
   Future<void> _openLocationPicker() async {
@@ -65,10 +83,10 @@ class _CreateContentViewState extends State<CreateContentView> {
   }
 
   Future<void> _publish() async {
-    final path = _image?.path;
+    final path = _mediaFile?.path;
     final text = _description.text.trim();
     if (path == null || path.isEmpty) {
-      showAppSnackBar(context, 'Lütfen bir fotoğraf seç.', isError: true);
+      showAppSnackBar(context, 'Lütfen bir medya seç.', isError: true);
       return;
     }
     if (text.isEmpty) {
@@ -80,13 +98,13 @@ class _CreateContentViewState extends State<CreateContentView> {
     final err = await contents.uploadContent(
       request: CreateContentRequest(
         description: text,
-        contentType: 'IMAGE',
+        contentType: _contentType,
         latitude: _location.latitude,
         longitude: _location.longitude,
         locationName: _location.locationName,
-        shareType: 'PUBLIC',
+        shareType: _shareType,
       ),
-      imagePath: path,
+      mediaPath: path,
     );
     if (!mounted) return;
 
@@ -141,59 +159,100 @@ class _CreateContentViewState extends State<CreateContentView> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Fotoğrafını ekle, kısa bir not yaz ve konumunu seç.',
+                    'Fotoğrafını veya videonu ekle, kısa bir not yaz ve konumunu seç.',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: AppColors.secondary.withValues(alpha: 0.85),
                     ),
                   ),
                   const SizedBox(height: 20),
-                  GestureDetector(
-                    onTap: uploading ? null : _pickImage,
-                    child: AspectRatio(
-                      aspectRatio: 4 / 3,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceContainerLow,
-                          borderRadius: BorderRadius.circular(AppRadii.lg),
-                          border: Border.all(
-                            color: AppColors.outlineVariant.withValues(
-                              alpha: 0.2,
-                            ),
+                  AspectRatio(
+                    aspectRatio: 4 / 3,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(AppRadii.lg),
+                        border: Border.all(
+                          color: AppColors.outlineVariant.withValues(
+                            alpha: 0.2,
                           ),
                         ),
-                        child: _image == null
-                            ? Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
+                      ),
+                      child: _mediaFile == null
+                          ? Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Symbols.perm_media,
+                                  size: 48,
+                                  color: AppColors.secondary.withValues(
+                                    alpha: 0.8,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Medya seç',
+                                  style: theme.textTheme.titleSmall?.copyWith(
+                                    color: AppColors.onSurfaceVariant,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            )
+                          : _contentType == 'IMAGE'
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(AppRadii.lg),
+                              child: Image.file(
+                                File(_mediaFile!.path),
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                              ),
+                            )
+                          : Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(
-                                    Symbols.add_a_photo,
-                                    size: 48,
-                                    color: AppColors.secondary.withValues(
-                                      alpha: 0.8,
-                                    ),
+                                    Symbols.videocam,
+                                    size: 52,
+                                    color: AppColors.primaryContainer,
                                   ),
-                                  const SizedBox(height: 12),
+                                  const SizedBox(height: 10),
                                   Text(
-                                    'Fotoğraf seç',
+                                    _mediaFile!.path
+                                        .split(Platform.pathSeparator)
+                                        .last,
+                                    textAlign: TextAlign.center,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
                                     style: theme.textTheme.titleSmall?.copyWith(
-                                      color: AppColors.onSurfaceVariant,
+                                      color: AppColors.onSurface,
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
                                 ],
-                              )
-                            : ClipRRect(
-                                borderRadius: BorderRadius.circular(
-                                  AppRadii.lg,
-                                ),
-                                child: Image.file(
-                                  File(_image!.path),
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                ),
                               ),
-                      ),
+                            ),
                     ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: uploading ? null : _pickImage,
+                          icon: const Icon(Symbols.add_a_photo),
+                          label: const Text('Fotoğraf seç'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: uploading ? null : _pickVideo,
+                          icon: const Icon(Symbols.videocam),
+                          label: const Text('Video seç'),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 20),
                   TextField(
@@ -287,6 +346,54 @@ class _CreateContentViewState extends State<CreateContentView> {
                         ),
                       ),
                     ),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    initialValue: _shareType,
+                    decoration: InputDecoration(
+                      labelText: 'Paylaşım tipi',
+                      filled: true,
+                      fillColor: AppColors.surfaceContainerLow,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadii.lg),
+                        borderSide: BorderSide(
+                          color: AppColors.outlineVariant.withValues(
+                            alpha: 0.15,
+                          ),
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadii.lg),
+                        borderSide: BorderSide(
+                          color: AppColors.outlineVariant.withValues(
+                            alpha: 0.15,
+                          ),
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadii.lg),
+                        borderSide: BorderSide(
+                          color: AppColors.primaryContainer.withValues(
+                            alpha: 0.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                    dropdownColor: AppColors.surfaceContainer,
+                    items: const [
+                      DropdownMenuItem(value: 'PUBLIC', child: Text('İsimli')),
+                      DropdownMenuItem(
+                        value: 'ANONYMOUS',
+                        child: Text('Anonim'),
+                      ),
+                    ],
+                    onChanged: uploading
+                        ? null
+                        : (value) {
+                            if (value != null) {
+                              setState(() => _shareType = value);
+                            }
+                          },
                   ),
                   const SizedBox(height: 28),
                   FilledButton(

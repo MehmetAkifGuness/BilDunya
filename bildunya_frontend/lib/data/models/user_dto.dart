@@ -9,7 +9,10 @@ class UserDto {
     this.bio,
     this.isAnonymous,
     this.isActive,
+    this.emailVerified,
+    this.role,
     this.phoneNumber,
+    this.locationPreferences,
     this.createdAt,
   });
 
@@ -21,7 +24,10 @@ class UserDto {
   final String? bio;
   final bool? isAnonymous;
   final bool? isActive;
+  final bool? emailVerified;
+  final String? role;
   final String? phoneNumber;
+  final String? locationPreferences;
   final String? createdAt;
 
   factory UserDto.fromJson(Map<String, dynamic> json) {
@@ -34,27 +40,37 @@ class UserDto {
       bio: json['bio'] as String?,
       isAnonymous: json['isAnonymous'] as bool?,
       isActive: json['isActive'] as bool?,
+      emailVerified: json['emailVerified'] as bool?,
+      role: json['role'] as String?,
       phoneNumber: json['phoneNumber'] as String?,
+      locationPreferences: json['locationPreferences'] as String?,
       createdAt: json['created_at'] as String? ?? json['createdAt'] as String?,
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'username': username,
-        'email': email,
-        'fullName': fullName,
-        'profilePhotoUrl': profilePhotoUrl,
-        'bio': bio,
-        'isAnonymous': isAnonymous,
-        'isActive': isActive,
-        'phoneNumber': phoneNumber,
-        'created_at': createdAt,
-      };
+    'id': id,
+    'username': username,
+    'email': email,
+    'fullName': fullName,
+    'profilePhotoUrl': profilePhotoUrl,
+    'bio': bio,
+    'isAnonymous': isAnonymous,
+    'isActive': isActive,
+    'emailVerified': emailVerified,
+    'role': role,
+    'phoneNumber': phoneNumber,
+    'locationPreferences': locationPreferences,
+    'created_at': createdAt,
+  };
 
   String get displayName {
-    if (fullName != null && fullName!.trim().isNotEmpty) return fullName!.trim();
-    if (username != null && username!.trim().isNotEmpty) return username!.trim();
+    if (fullName != null && fullName!.trim().isNotEmpty) {
+      return fullName!.trim();
+    }
+    if (username != null && username!.trim().isNotEmpty) {
+      return username!.trim();
+    }
     return 'Gezgin';
   }
 }

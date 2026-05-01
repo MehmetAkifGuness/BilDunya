@@ -77,7 +77,10 @@ public class UserService {
                 .bio(user.getBio())
                 .isAnonymous(user.getIsAnonymous())
                 .isActive(user.getIsActive())
+                .emailVerified(user.getEmailVerified())
+                .role(user.getRole())
                 .phoneNumber(user.getPhoneNumber())
+                .locationPreferences(user.getLocationPreferences())
                 .createdAt(user.getCreatedAt() != null ? user.getCreatedAt().format(formatter) : null)
                 .build();
     }
