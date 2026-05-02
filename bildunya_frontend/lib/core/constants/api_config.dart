@@ -1,10 +1,11 @@
 /// Spring Boot `server.servlet.context-path=/api` + Android emülatör/fiziksel cihaz bağlantısı.
 abstract final class ApiConfig {
   /// Tam API kökü (Dio `baseUrl`).
+
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    // DEĞİŞEN KISIM BURASI: localhost yerine senin IP adresin yazıldı.
-    defaultValue: 'http://10.36.224.163:8080/api',
+    // BURAYI GÜNCELLEDİK: Emülatörün bilgisayarındaki 8080'e erişmesi için 10.0.2.2 şart.
+    defaultValue: 'http://10.0.2.2:8080/api',
   );
 
   /// `fileUrl` gibi `/api/uploads/...` path'leri için şema + host (context'siz kök).

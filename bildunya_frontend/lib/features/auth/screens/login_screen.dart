@@ -8,7 +8,6 @@ import '../../../data/models/login_request.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/auth_text_field.dart';
 import '../widgets/gradient_auth_button.dart';
-import '../widgets/social_auth_row.dart';
 import '../../shell/main_shell.dart';
 import 'register_screen.dart';
 
@@ -130,24 +129,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () {},
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppColors.primaryContainer,
-                      padding: const EdgeInsets.only(top: 8),
-                    ),
-                    child: Text(
-                      'Şifremi Unuttum',
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        color: AppColors.primaryContainer,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
                 const SizedBox(height: 24),
                 GradientAuthButton(
                   label: 'Giriş Yap',
@@ -158,35 +139,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   onPressed: _submit,
                 ),
                 const SizedBox(height: 32),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        height: 1,
-                        color: AppColors.outlineVariant.withValues(alpha: 0.2),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        'VEYA',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: AppColors.secondary.withValues(alpha: 0.4),
-                          letterSpacing: 3.2,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Container(
-                        height: 1,
-                        color: AppColors.outlineVariant.withValues(alpha: 0.2),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                const SocialAuthRow(),
-                const SizedBox(height: 20),
                 TextButton(
                   onPressed: () {
                     Navigator.of(context).pushNamed(RegisterScreen.routeName);
