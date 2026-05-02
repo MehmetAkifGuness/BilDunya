@@ -3,9 +3,9 @@ spring:
     name: bildunya-backend
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/bildunya_db
-    username: bildunya_user
-    password: bildunya_password
+    url: jdbc:postgresql://ep-misty-tooth-alem8knh.c-3.eu-central-1.aws.neon.tech/neondb?sslmode=require
+    username: neondb_owner
+    password: npg_dR2rgxzXMIc7
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -48,8 +48,9 @@ logging:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %logger{36} - %msg%n"
 
 # JWT Configuration
+# JWT Configuration
 jwt:
-  secret: ${JWT_SECRET}
+  secret: ${JWT_SECRET:BilDunyaProjesiIcinCokGizliVeUzunBirAnahtar2026}
   expiration: ${JWT_EXPIRATION:86400000} # 24 saat
   refresh-expiration: ${JWT_REFRESH_EXPIRATION:2592000000} # 30 gün
 
@@ -75,3 +76,7 @@ springdoc:
     path: /swagger-ui.html
   api-docs:
     path: /v3/api-docs
+
+# Cloudinary Configuration
+cloudinary:
+  url: ${CLOUDINARY_URL:cloudinary://API_KEY:API_SECRET@CLOUD_NAME}

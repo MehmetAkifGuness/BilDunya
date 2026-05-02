@@ -122,8 +122,8 @@ public class ContentService {
 
         content = contentRepository.save(content);
 
-        String storedFilename = fileStorageService.store(file, "content_" + content.getId());
-        content.setFileUrl("/api/uploads/" + storedFilename);
+        String fileUrl = fileStorageService.store(file, "content_" + content.getId());
+        content.setFileUrl(fileUrl);
 
         content = contentRepository.save(content);
         return mapToContentDto(content);
@@ -155,8 +155,8 @@ public class ContentService {
         content.setExifData(exifMatch.json());
         applyVerificationDecision(content, exifMatch);
 
-        String storedFilename = fileStorageService.store(file, "content_" + content.getId());
-        content.setFileUrl("/api/uploads/" + storedFilename);
+        String fileUrl = fileStorageService.store(file, "content_" + content.getId());
+        content.setFileUrl(fileUrl);
 
         content = contentRepository.save(content);
         return mapToContentDto(content);

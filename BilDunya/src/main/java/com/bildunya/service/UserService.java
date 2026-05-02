@@ -58,8 +58,8 @@ public class UserService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        String storedFilename = fileStorageService.store(file, "profile_" + user.getId());
-        user.setProfilePhotoUrl("/api/uploads/" + storedFilename);
+        String profilePhotoUrl = fileStorageService.store(file, "profile_" + user.getId());
+        user.setProfilePhotoUrl(profilePhotoUrl);
 
         user = userRepository.save(user);
         return mapToUserDto(user);
