@@ -1,11 +1,11 @@
-/// Spring Boot `server.servlet.context-path=/api` + Android emülatör/fiziksel cihaz bağlantısı.
+/// Spring Boot `server.servlet.context-path=/api` + Canlı Render Sunucusu bağlantısı.
 abstract final class ApiConfig {
   /// Tam API kökü (Dio `baseUrl`).
 
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    // BURAYI GÜNCELLEDİK: Emülatörün bilgisayarındaki 8080'e erişmesi için 10.0.2.2 şart.
-    defaultValue: 'http://10.0.2.2:8080/api',
+    // BURAYI GÜNCELLEDİK: Artık lokaldeki 10.0.2.2 yerine Render'daki canlı sunucumuzu kullanıyoruz!
+    defaultValue: 'https://bildunya-backend.onrender.com/api',
   );
 
   /// `fileUrl` gibi `/api/uploads/...` path'leri için şema + host (context'siz kök).
