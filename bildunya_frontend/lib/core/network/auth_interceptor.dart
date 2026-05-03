@@ -31,7 +31,9 @@ class AuthInterceptor extends Interceptor {
     final requestOptions = err.requestOptions;
     final alreadyRetried = requestOptions.extra['retried'] == true;
 
-    if (statusCode != 401 ||
+    // Backend bazen yetkisiz istekler iÃ§in 401 yerine 403 dÃ¶ndÃ¼rebiliyor.
+    // Refresh denemesini her iki durumda da yap.
+    if ((statusCode != 401 && statusCode != 403) ||
         alreadyRetried ||
         _isAuthPath(requestOptions.path)) {
       handler.next(err);
