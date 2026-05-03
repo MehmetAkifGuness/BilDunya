@@ -8,12 +8,14 @@ import 'data/repositories/auth_repository.dart';
 import 'data/repositories/chat_repository.dart';
 import 'data/repositories/comment_repository.dart';
 import 'data/repositories/content_repository.dart';
+import 'data/repositories/custom_location_repository.dart';
 import 'data/repositories/profile_repository.dart';
 import 'features/auth/providers/auth_provider.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/register_screen.dart';
 import 'features/auth/screens/splash_screen.dart';
 import 'features/content/providers/contents_provider.dart';
+import 'features/map/providers/custom_locations_provider.dart';
 import 'features/profile/providers/profile_provider.dart';
 import 'features/content/screens/content_detail_view.dart';
 import 'features/content/screens/create_content_view.dart';
@@ -26,6 +28,7 @@ void main() {
   final dio = DioClient.create(storage);
   final authRepository = AuthRepository(dio, storage);
   final contentRepository = ContentRepository(dio);
+  final customLocationRepository = CustomLocationRepository(dio);
   final commentRepository = CommentRepository(dio);
   final chatRepository = ChatRepository(dio);
   final profileRepository = ProfileRepository(dio);
@@ -34,6 +37,7 @@ void main() {
     MultiProvider(
       providers: [
         Provider<ContentRepository>.value(value: contentRepository),
+        Provider<CustomLocationRepository>.value(value: customLocationRepository),
         Provider<CommentRepository>.value(value: commentRepository),
         Provider<ChatRepository>.value(value: chatRepository),
         Provider<ProfileRepository>.value(value: profileRepository),
@@ -42,6 +46,9 @@ void main() {
         ),
         ChangeNotifierProvider(
           create: (_) => ContentsProvider(contentRepository),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => CustomLocationsProvider(customLocationRepository),
         ),
         ChangeNotifierProvider(
           create: (_) => ProfileProvider(profileRepository, contentRepository),

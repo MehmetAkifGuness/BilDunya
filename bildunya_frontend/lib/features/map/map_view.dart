@@ -6,14 +6,104 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/api_config.dart';
+import '../../core/constants/popular_locations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radii.dart';
 import '../../core/widgets/content_verification_badge.dart';
 import '../../data/models/content_dto.dart';
+import '../../data/models/custom_location_dto.dart';
 import '../content/providers/contents_provider.dart';
 import '../content/screens/content_detail_view.dart';
+import 'providers/custom_locations_provider.dart';
+import 'widgets/create_custom_location_sheet.dart';
 
 enum _MapChip { none, historic, nature }
+enum _PinLayer { all, popular, custom }
+
+sealed class _MapPin {
+  const _MapPin();
+
+  String get key;
+  LatLng get point;
+  String get title;
+  String get subtitle;
+  String get imageUrl;
+}
+
+final class _ContentPin extends _MapPin {
+  const _ContentPin(this.content);
+
+  final ContentDto content;
+
+  @override
+  String get key => 'content:${content.id}';
+
+  @override
+  LatLng get point => LatLng(content.latitude!, content.longitude!);
+
+  @override
+  String get title =>
+      content.locationName?.trim().isNotEmpty == true ? content.locationName!.trim() : 'Keşif';
+
+  @override
+  String get subtitle {
+    final d = content.description?.trim();
+    if (d != null && d.isNotEmpty) return d;
+    final t = content.tags?.trim();
+    return (t != null && t.isNotEmpty) ? t : 'Yakınındaki bir paylaşım';
+  }
+
+  @override
+  String get imageUrl => ApiConfig.resolveFileUrl(content.fileUrl);
+}
+
+final class _PopularPin extends _MapPin {
+  const _PopularPin(this.location);
+
+  final PopularLocation location;
+
+  @override
+  String get key => 'popular:${location.name}';
+
+  @override
+  LatLng get point => LatLng(location.latitude, location.longitude);
+
+  @override
+  String get title => location.name;
+
+  @override
+  String get subtitle => location.description;
+
+  @override
+  String get imageUrl => '';
+}
+
+final class _CustomPin extends _MapPin {
+  const _CustomPin(this.location);
+
+  final CustomLocationDto location;
+
+  @override
+  String get key => 'custom:${location.id}';
+
+  @override
+  LatLng get point => LatLng(location.latitude!, location.longitude!);
+
+  @override
+  String get title =>
+      (location.name ?? 'Konum').trim().isEmpty ? 'Konum' : location.name!.trim();
+
+  @override
+  String get subtitle {
+    final d = location.description?.trim();
+    if (d != null && d.isNotEmpty) return d;
+    final tags = location.tags ?? const <String>[];
+    return tags.isNotEmpty ? tags.join(', ') : 'Kullanıcı konumu';
+  }
+
+  @override
+  String get imageUrl => ApiConfig.resolveFileUrl(location.imageUrl);
+}
 
 /// Harita: arama, filtre chipleri, yakındaki içerik pinleri, Keşfet → detay.
 class MapView extends StatefulWidget {
@@ -29,45 +119,58 @@ class _MapViewState extends State<MapView> {
   final MapController _mapController = MapController();
   final _searchController = TextEditingController();
   late ContentsProvider _contents;
+  late CustomLocationsProvider _customLocations;
   _MapChip _chip = _MapChip.none;
-  ContentDto? _selected;
+  _PinLayer _layer = _PinLayer.all;
+  _MapPin? _selected;
+  LatLng? _pendingPoint;
 
   @override
   void initState() {
     super.initState();
     _contents = context.read<ContentsProvider>();
-    _contents.addListener(_onContentsChanged);
+    _customLocations = context.read<CustomLocationsProvider>();
+    _contents.addListener(_onDataChanged);
+    _customLocations.addListener(_onDataChanged);
     _searchController.addListener(() {
       if (!mounted) return;
       setState(() {
-        _ensureSelection(_filteredPoints(_contents.nearby));
+        _ensureSelection(_filteredPins());
       });
     });
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await _contents.loadNearby(
-        latitude: MapView._defaultCenter.latitude,
-        longitude: MapView._defaultCenter.longitude,
-        radiusKm: 40,
-      );
+      await Future.wait([
+        _contents.loadNearby(
+          latitude: MapView._defaultCenter.latitude,
+          longitude: MapView._defaultCenter.longitude,
+          radiusKm: 40,
+        ),
+        _customLocations.loadNearby(
+          latitude: MapView._defaultCenter.latitude,
+          longitude: MapView._defaultCenter.longitude,
+          radiusKm: 40,
+        ),
+      ]);
     });
   }
 
   @override
   void dispose() {
-    _contents.removeListener(_onContentsChanged);
+    _contents.removeListener(_onDataChanged);
+    _customLocations.removeListener(_onDataChanged);
     _mapController.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
-  void _onContentsChanged() {
+  void _onDataChanged() {
     if (!mounted) return;
     setState(() {
-      _ensureSelection(_filteredPoints(_contents.nearby));
+      _ensureSelection(_filteredPins());
     });
   }
 
-  List<ContentDto> _filteredPoints(List<ContentDto> raw) {
+  List<ContentDto> _filteredContents(List<ContentDto> raw) {
     var list = raw
         .where((c) => c.latitude != null && c.longitude != null && c.id != null)
         .toList();
@@ -80,14 +183,6 @@ class _MapViewState extends State<MapView> {
         break;
       case _MapChip.none:
         break;
-    }
-    final q = _searchController.text.trim().toLowerCase();
-    if (q.isNotEmpty) {
-      list = list.where((c) {
-        return (c.locationName ?? '').toLowerCase().contains(q) ||
-            (c.description ?? '').toLowerCase().contains(q) ||
-            (c.tags ?? '').toLowerCase().contains(q);
-      }).toList();
     }
     return list;
   }
@@ -125,25 +220,25 @@ class _MapViewState extends State<MapView> {
         desc.contains('doga');
   }
 
-  void _ensureSelection(List<ContentDto> points) {
-    if (points.isEmpty) {
+  void _ensureSelection(List<_MapPin> pins) {
+    if (pins.isEmpty) {
       _selected = null;
       return;
     }
     final sel = _selected;
-    final ok = sel != null && points.any((e) => e.id != null && e.id == sel.id);
+    final ok = sel != null && pins.any((e) => e.key == sel.key);
     if (!ok) {
-      _selected = points.first;
+      _selected = pins.first;
     }
   }
 
-  void _openDetail(ContentDto c) {
-    final id = c.id;
+  void _openDetail(_ContentPin pin) {
+    final id = pin.content.id;
     if (id == null) return;
     Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (_) => ContentDetailView(
-          args: ContentDetailArgs(contentId: id, preview: c),
+          args: ContentDetailArgs(contentId: id, preview: pin.content),
         ),
       ),
     );
@@ -156,28 +251,112 @@ class _MapViewState extends State<MapView> {
       } else {
         _chip = next;
       }
-      _ensureSelection(_filteredPoints(_contents.nearby));
+      _ensureSelection(_filteredPins());
     });
+  }
+
+  void _setLayer(_PinLayer next) {
+    setState(() {
+      _layer = next;
+      _ensureSelection(_filteredPins());
+    });
+  }
+
+  bool _matchesQuery(_MapPin pin, String q) {
+    final lower = q.toLowerCase();
+    if (pin.title.toLowerCase().contains(lower)) return true;
+    if (pin.subtitle.toLowerCase().contains(lower)) return true;
+
+    if (pin is _ContentPin) {
+      final tags = (pin.content.tags ?? '').toLowerCase();
+      return tags.contains(lower);
+    }
+    if (pin is _PopularPin) {
+      return pin.location.tags.any((t) => t.toLowerCase().contains(lower));
+    }
+    if (pin is _CustomPin) {
+      final tags = pin.location.tags ?? const <String>[];
+      return tags.any((t) => t.toLowerCase().contains(lower));
+    }
+    return false;
+  }
+
+  List<_MapPin> _filteredPins() {
+    final q = _searchController.text.trim();
+
+    final pins = <_MapPin>[];
+
+    if (_layer == _PinLayer.all) {
+      final contents = _filteredContents(_contents.nearby);
+      pins.addAll(contents.map(_ContentPin.new));
+      pins.addAll(popularLocations.map(_PopularPin.new));
+      final custom = _customLocations.nearby
+          .where((c) => c.latitude != null && c.longitude != null && c.id != null)
+          .toList();
+      pins.addAll(custom.map(_CustomPin.new));
+    } else if (_layer == _PinLayer.popular) {
+      pins.addAll(popularLocations.map(_PopularPin.new));
+    } else {
+      final custom = _customLocations.nearby
+          .where((c) => c.latitude != null && c.longitude != null && c.id != null)
+          .toList();
+      pins.addAll(custom.map(_CustomPin.new));
+    }
+
+    if (q.isEmpty) return pins;
+    return pins.where((p) => _matchesQuery(p, q)).toList();
+  }
+
+  Future<void> _onMapTap(LatLng point) async {
+    setState(() => _pendingPoint = point);
+
+    final created = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: AppColors.surfaceContainer,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppRadii.lg),
+        ),
+      ),
+      builder: (context) => CreateCustomLocationSheet(point: point),
+    );
+
+    if (!mounted) return;
+    setState(() => _pendingPoint = null);
+
+    if (created == true) {
+      await _customLocations.loadNearby(
+        latitude: point.latitude,
+        longitude: point.longitude,
+        radiusKm: 40,
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final bottomInset = MediaQuery.paddingOf(context).bottom + 88;
-    final nearby = _contents.nearby;
-    final points = _filteredPoints(nearby);
+    final pins = _filteredPins();
+    final loading = _contents.loadingNearby || _customLocations.loadingNearby;
+
+    final combinedError = pins.isEmpty
+        ? (_contents.nearbyError ?? _customLocations.nearbyError)
+        : null;
 
     final markers = <Marker>[
-      for (final c in points)
+      for (final pin in pins)
         Marker(
           width: 46,
           height: 46,
-          point: LatLng(c.latitude!, c.longitude!),
+          point: pin.point,
           child: GestureDetector(
-            onTap: () => setState(() => _selected = c),
+            onTap: () => setState(() => _selected = pin),
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: _selected?.id == c.id
+                color: _selected?.key == pin.key
                     ? AppColors.primaryContainer
                     : AppColors.surfaceContainer,
                 shape: BoxShape.circle,
@@ -194,12 +373,46 @@ class _MapViewState extends State<MapView> {
                 ],
               ),
               child: Icon(
-                Symbols.location_on,
+                pin is _CustomPin
+                    ? Symbols.place
+                    : (pin is _PopularPin ? Symbols.star : Symbols.location_on),
                 size: 26,
-                color: _selected?.id == c.id
+                color: _selected?.key == pin.key
                     ? AppColors.onPrimary
-                    : AppColors.primaryContainer,
+                    : (pin is _CustomPin
+                        ? AppColors.error
+                        : (pin is _PopularPin
+                            ? AppColors.tertiary
+                            : AppColors.primaryContainer)),
               ),
+            ),
+          ),
+        ),
+      if (_pendingPoint != null)
+        Marker(
+          width: 46,
+          height: 46,
+          point: _pendingPoint!,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppColors.surfaceContainer,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: AppColors.primaryContainer,
+                width: 3,
+              ),
+              boxShadow: const [
+                BoxShadow(
+                  blurRadius: 10,
+                  color: Colors.black45,
+                  offset: Offset(0, 3),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Symbols.add_location_alt,
+              size: 26,
+              color: AppColors.primaryContainer,
             ),
           ),
         ),
@@ -217,6 +430,7 @@ class _MapViewState extends State<MapView> {
                 initialZoom: 12,
                 minZoom: 3,
                 maxZoom: 18,
+                onTap: (tapPosition, point) => _onMapTap(point),
               ),
               children: [
                 TileLayer(
@@ -282,6 +496,24 @@ class _MapViewState extends State<MapView> {
                       scrollDirection: Axis.horizontal,
                       child: Row(
                         children: [
+                          _LayerChip(
+                            label: 'TÜMÜ',
+                            selected: _layer == _PinLayer.all,
+                            onTap: () => _setLayer(_PinLayer.all),
+                          ),
+                          const SizedBox(width: 8),
+                          _LayerChip(
+                            label: 'POPÜLER',
+                            selected: _layer == _PinLayer.popular,
+                            onTap: () => _setLayer(_PinLayer.popular),
+                          ),
+                          const SizedBox(width: 8),
+                          _LayerChip(
+                            label: 'KULLANICI',
+                            selected: _layer == _PinLayer.custom,
+                            onTap: () => _setLayer(_PinLayer.custom),
+                          ),
+                          const SizedBox(width: 12),
                           _FilterChip(
                             label: 'Tarihi',
                             icon: Symbols.history_edu,
@@ -303,7 +535,7 @@ class _MapViewState extends State<MapView> {
               ),
             ),
           ),
-          if (_contents.loadingNearby && points.isEmpty)
+          if (loading && pins.isEmpty)
             const Positioned.fill(
               child: ColoredBox(
                 color: Color(0x33000000),
@@ -315,15 +547,53 @@ class _MapViewState extends State<MapView> {
             right: 16,
             bottom: bottomInset,
             child: _BottomPreviewCard(
-              content: _selected,
-              loading: _contents.loadingNearby,
-              error: _contents.nearbyError,
-              onExplore: _selected == null
-                  ? null
-                  : () => _openDetail(_selected!),
+              pin: _selected,
+              loading: loading,
+              error: combinedError,
+              onExplore: _selected is _ContentPin
+                  ? () => _openDetail(_selected! as _ContentPin)
+                  : null,
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _LayerChip extends StatelessWidget {
+  const _LayerChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      color: selected
+          ? AppColors.secondaryContainer
+          : AppColors.surfaceContainer.withValues(alpha: 0.88),
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Text(
+            label,
+            style: theme.textTheme.labelSmall?.copyWith(
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.8,
+              color: selected ? AppColors.onSurface : AppColors.secondary,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -382,13 +652,13 @@ class _FilterChip extends StatelessWidget {
 
 class _BottomPreviewCard extends StatelessWidget {
   const _BottomPreviewCard({
-    required this.content,
+    required this.pin,
     required this.loading,
     this.error,
     this.onExplore,
   });
 
-  final ContentDto? content;
+  final _MapPin? pin;
   final bool loading;
   final String? error;
   final VoidCallback? onExplore;
@@ -397,7 +667,7 @@ class _BottomPreviewCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    if (error != null && content == null && !loading) {
+    if (error != null && pin == null && !loading) {
       return Material(
         elevation: 8,
         color: AppColors.surfaceContainer,
@@ -412,7 +682,7 @@ class _BottomPreviewCard extends StatelessWidget {
       );
     }
 
-    if (content == null) {
+    if (pin == null) {
       return Material(
         elevation: 8,
         color: AppColors.surfaceContainer,
@@ -431,14 +701,11 @@ class _BottomPreviewCard extends StatelessWidget {
       );
     }
 
-    final c = content!;
-    final url = ApiConfig.resolveFileUrl(c.fileUrl);
-    final title = c.locationName?.trim().isNotEmpty == true
-        ? c.locationName!.trim()
-        : 'Keşif';
-    final subtitle = c.description?.trim().isNotEmpty == true
-        ? c.description!.trim()
-        : (c.tags ?? 'Yakınındaki bir paylaşım');
+    final p = pin!;
+    final url = p.imageUrl;
+    final title = p.title;
+    final subtitle = p.subtitle;
+    final isContent = p is _ContentPin;
 
     return Material(
       elevation: 10,
@@ -508,13 +775,25 @@ class _BottomPreviewCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  ContentVerificationBadge(
-                    verificationStatus: c.verificationStatus,
-                    isVerified: c.isVerified,
-                    rejectionReason: c.rejectionReason,
-                    compact: true,
-                  ),
-                  const SizedBox(height: 4),
+                  if (p case final _ContentPin contentPin) ...[
+                    ContentVerificationBadge(
+                      verificationStatus: contentPin.content.verificationStatus,
+                      isVerified: contentPin.content.isVerified,
+                      rejectionReason: contentPin.content.rejectionReason,
+                      compact: true,
+                    ),
+                    const SizedBox(height: 4),
+                  ] else
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        p is _PopularPin ? 'Sistem konumu' : 'Kullanıcı konumu',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: AppColors.secondary.withValues(alpha: 0.85),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
                   Text(
                     subtitle,
                     maxLines: 2,
@@ -525,30 +804,31 @@ class _BottomPreviewCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: FilledButton(
-                      onPressed: onExplore,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.primaryContainer,
-                        foregroundColor: AppColors.onPrimary,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
+                  if (isContent)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: FilledButton(
+                        onPressed: onExplore,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.primaryContainer,
+                          foregroundColor: AppColors.onPrimary,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          shape: const StadiumBorder(),
                         ),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        shape: const StadiumBorder(),
-                      ),
-                      child: Text(
-                        'KEŞFET',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.8,
+                        child: Text(
+                          'KEŞFET',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.8,
+                          ),
                         ),
                       ),
                     ),
-                  ),
                 ],
               ),
             ),
