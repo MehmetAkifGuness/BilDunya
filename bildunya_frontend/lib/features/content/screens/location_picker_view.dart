@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../../../core/constants/popular_locations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radii.dart';
 import '../models/picked_location.dart';
@@ -21,29 +22,6 @@ class _LocationPickerViewState extends State<LocationPickerView> {
   final MapController _mapController = MapController();
   final _searchController = TextEditingController();
 
-  static final _presets = <PickedLocation>[
-    const PickedLocation(
-      latitude: 38.6431,
-      longitude: 34.8282,
-      locationName: 'Göreme Vadisi',
-    ),
-    const PickedLocation(
-      latitude: 38.6294,
-      longitude: 34.9119,
-      locationName: 'Ürgüp',
-    ),
-    const PickedLocation(
-      latitude: 38.7204,
-      longitude: 34.8467,
-      locationName: 'Avanos',
-    ),
-    const PickedLocation(
-      latitude: 38.6280,
-      longitude: 34.8020,
-      locationName: 'Uçhisar Kalesi',
-    ),
-  ];
-
   LatLng _mapCenter = const LatLng(38.6431, 34.8282);
   String _mapLabel = 'Harita merkezi';
 
@@ -56,12 +34,24 @@ class _LocationPickerViewState extends State<LocationPickerView> {
 
   List<PickedLocation> get _filteredPresets {
     final q = _searchController.text.trim().toLowerCase();
-    if (q.isEmpty) return _presets;
-    return _presets
-        .where(
-          (p) =>
-              p.locationName.toLowerCase().contains(q) ||
-              '${p.latitude},${p.longitude}'.contains(q),
+
+    final results = q.isEmpty
+        ? popularLocations
+        : popularLocations.where((p) {
+            final inName = p.name.toLowerCase().contains(q);
+            final inDescription = p.description.toLowerCase().contains(q);
+            final inTags = p.tags.any((t) => t.toLowerCase().contains(q));
+            final inCoords = '${p.latitude},${p.longitude}'.contains(q);
+            return inName || inDescription || inTags || inCoords;
+          }).toList();
+
+    return results
+        .map(
+          (p) => PickedLocation(
+            latitude: p.latitude,
+            longitude: p.longitude,
+            locationName: p.name,
+          ),
         )
         .toList();
   }

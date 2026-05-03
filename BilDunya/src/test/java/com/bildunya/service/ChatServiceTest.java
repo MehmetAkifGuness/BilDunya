@@ -154,4 +154,3 @@ class ChatServiceTest {
         verify(chatMessageRepository).attachConversationIdToExistingMessages(77L, 1L, 2L);
     }
 }
-
