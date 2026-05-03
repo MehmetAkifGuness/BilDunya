@@ -5,6 +5,7 @@ import lombok.*;
 
 @Entity
 @Table(name = "chat_messages", indexes = {
+        @Index(name = "idx_chat_conversation_created_at", columnList = "conversation_id,created_at"),
         @Index(name = "idx_chat_sender_receiver_created_at", columnList = "sender_id,receiver_id,created_at"),
         @Index(name = "idx_chat_receiver_created_at", columnList = "receiver_id,created_at")
 })
@@ -14,6 +15,10 @@ import lombok.*;
 @Builder
 @EqualsAndHashCode(callSuper = true)
 public class ChatMessage extends BaseEntity {
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "conversation_id")
+    private ChatConversation conversation;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sender_id", nullable = false)
@@ -29,4 +34,3 @@ public class ChatMessage extends BaseEntity {
     @Column(name = "is_read", nullable = false)
     private Boolean isRead = false;
 }
-

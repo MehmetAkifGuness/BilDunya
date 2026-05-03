@@ -13,13 +13,24 @@ import org.springframework.stereotype.Repository;
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
 
     @Query("SELECT m FROM ChatMessage m " +
-            "WHERE m.isDeleted = false AND " +
-            "((m.sender.id = :user1Id AND m.receiver.id = :user2Id) OR (m.sender.id = :user2Id AND m.receiver.id = :user1Id)) " +
+            "WHERE m.isDeleted = false AND m.conversation.id = :conversationId " +
             "ORDER BY m.createdAt DESC")
-    Page<ChatMessage> findConversation(
-            @Param("user1Id") Long user1Id,
-            @Param("user2Id") Long user2Id,
+    Page<ChatMessage> findByConversationId(
+            @Param("conversationId") Long conversationId,
             Pageable pageable);
+
+    @Modifying
+    @Query(
+            value = "UPDATE chat_messages " +
+                    "SET conversation_id = :conversationId " +
+                    "WHERE conversation_id IS NULL AND is_deleted = false AND " +
+                    "((sender_id = :user1Id AND receiver_id = :user2Id) OR (sender_id = :user2Id AND receiver_id = :user1Id))",
+            nativeQuery = true
+    )
+    int attachConversationIdToExistingMessages(
+            @Param("conversationId") Long conversationId,
+            @Param("user1Id") Long user1Id,
+            @Param("user2Id") Long user2Id);
 
     @Modifying
     @Query("UPDATE ChatMessage m SET m.isRead = true " +
