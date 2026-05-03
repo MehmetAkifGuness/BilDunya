@@ -12,7 +12,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -29,6 +28,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @RestController
 @RequestMapping("/custom-locations")
@@ -51,15 +53,49 @@ public class CustomLocationController {
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @SecurityRequirement(name = "Bearer Authentication")
-    @Operation(summary = "Create new custom location with image upload")
+    @Operation(summary = "Create new custom location with image upload(s)")
     public ResponseEntity<CustomLocationDto> createWithImage(
             @Valid @RequestPart("data") CreateCustomLocationRequest request,
-            @RequestPart(value = "file", required = false) MultipartFile file) {
+            @RequestPart(value = "file", required = false) MultipartFile file,
+            @RequestPart(value = "files", required = false) List<MultipartFile> files) {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
-        CustomLocationDto created = customLocationService.createCustomLocationWithImage(principal.getUsername(), request, file);
+
+        List<MultipartFile> images = new ArrayList<>();
+        if (files != null) {
+            images.addAll(files);
+        }
+        if (file != null && !file.isEmpty()) {
+            images.add(file);
+        }
+
+        CustomLocationDto created = images.isEmpty()
+                ? customLocationService.createCustomLocation(principal.getUsername(), request)
+                : customLocationService.createCustomLocationWithImages(principal.getUsername(), request, images);
         return new ResponseEntity<>(created, HttpStatus.CREATED);
+    }
+
+    @PostMapping(value = "/{id}/photos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @SecurityRequirement(name = "Bearer Authentication")
+    @Operation(summary = "Upload photo(s) for a custom location (owner only)")
+    public ResponseEntity<CustomLocationDto> addPhotos(
+            @PathVariable Long id,
+            @RequestPart(value = "file", required = false) MultipartFile file,
+            @RequestPart(value = "files", required = false) List<MultipartFile> files) {
+
+        List<MultipartFile> images = new ArrayList<>();
+        if (files != null) {
+            images.addAll(files);
+        }
+        if (file != null && !file.isEmpty()) {
+            images.add(file);
+        }
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
+        CustomLocationDto updated = customLocationService.addPhotos(id, principal.getUsername(), images);
+        return ResponseEntity.ok(updated);
     }
 
     @GetMapping("/{id}")
@@ -77,15 +113,14 @@ public class CustomLocationController {
             @RequestParam(defaultValue = "false") boolean mineOnly,
             Authentication authentication,
             @RequestParam(defaultValue = "0") Integer page,
-            @RequestParam(defaultValue = "100") Integer size,
-            @RequestParam(defaultValue = "created_at") String sortBy) {
+            @RequestParam(defaultValue = "100") Integer size) {
 
         String username = null;
         if (mineOnly && authentication != null && authentication.getPrincipal() instanceof UserPrincipal principal) {
             username = principal.getUsername();
         }
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy).descending());
+        Pageable pageable = PageRequest.of(page, size);
         Page<CustomLocationDto> locations = customLocationService.getNearby(
                 latitude,
                 longitude,
@@ -106,4 +141,3 @@ public class CustomLocationController {
         return ResponseEntity.noContent().build();
     }
 }
-

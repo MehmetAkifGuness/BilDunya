@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../core/utils/user_friendly_error.dart';
 import '../../../data/models/create_custom_location_request.dart';
 import '../../../data/models/custom_location_dto.dart';
 import '../../../data/repositories/custom_location_repository.dart';
@@ -33,8 +34,7 @@ class CustomLocationsProvider extends ChangeNotifier {
       );
       nearby = page.content;
     } catch (e) {
-      nearbyError = e.toString();
-      nearby = [];
+      nearbyError = userFriendlyErrorMessage(e);
     } finally {
       loadingNearby = false;
       notifyListeners();
@@ -43,15 +43,26 @@ class CustomLocationsProvider extends ChangeNotifier {
 
   Future<CustomLocationDto?> createCustomLocation({
     required CreateCustomLocationRequest request,
-    String? imagePath,
+    List<String>? imagePaths,
   }) async {
     creating = true;
     notifyListeners();
     try {
-      if (imagePath != null && imagePath.trim().isNotEmpty) {
-        return await _repository.createWithFile(
+      final paths = (imagePaths ?? const <String>[])
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+
+      if (paths.isNotEmpty) {
+        if (paths.length == 1) {
+          return await _repository.createWithFile(
+            request: request,
+            filePath: paths.first,
+          );
+        }
+        return await _repository.createWithFiles(
           request: request,
-          filePath: imagePath,
+          filePaths: paths,
         );
       }
       return await _repository.create(request: request);
@@ -60,5 +71,30 @@ class CustomLocationsProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
-}
 
+  Future<CustomLocationDto?> addPhotos({
+    required int locationId,
+    required List<String> imagePaths,
+  }) async {
+    final paths =
+        imagePaths.map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    if (paths.isEmpty) return null;
+
+    creating = true;
+    notifyListeners();
+    try {
+      final updated = await _repository.addPhotos(
+        id: locationId,
+        filePaths: paths,
+      );
+      nearby = [
+        for (final l in nearby)
+          if (l.id == updated.id) updated else l,
+      ];
+      return updated;
+    } finally {
+      creating = false;
+      notifyListeners();
+    }
+  }
+}

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../core/utils/user_friendly_error.dart';
 import '../../../data/models/conversation_summary_dto.dart';
 import '../../../data/repositories/chat_repository.dart';
 
@@ -22,11 +23,10 @@ class ChatInboxProvider extends ChangeNotifier {
         ..clear()
         ..addAll(page.content);
     } catch (e) {
-      error = e.toString();
+      error = userFriendlyErrorMessage(e);
     } finally {
       loading = false;
       notifyListeners();
     }
   }
 }
-

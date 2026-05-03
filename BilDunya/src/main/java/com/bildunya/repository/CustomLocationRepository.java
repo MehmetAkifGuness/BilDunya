@@ -22,7 +22,8 @@ public interface CustomLocationRepository extends JpaRepository<CustomLocation, 
             "(6371 * acos(least(greatest(" +
             "cos(radians(:latitude)) * cos(radians(l.latitude)) * cos(radians(l.longitude) - radians(:longitude)) + " +
             "sin(radians(:latitude)) * sin(radians(l.latitude))" +
-            ", -1), 1))) <= :radiusKm",
+            ", -1), 1))) <= :radiusKm " +
+            "ORDER BY l.created_at DESC",
             countQuery = "SELECT count(*) FROM custom_locations l " +
                     "WHERE l.is_deleted = false AND " +
                     "l.latitude BETWEEN :minLat AND :maxLat AND " +
@@ -55,7 +56,8 @@ public interface CustomLocationRepository extends JpaRepository<CustomLocation, 
             "(6371 * acos(least(greatest(" +
             "cos(radians(:latitude)) * cos(radians(l.latitude)) * cos(radians(l.longitude) - radians(:longitude)) + " +
             "sin(radians(:latitude)) * sin(radians(l.latitude))" +
-            ", -1), 1))) <= :radiusKm",
+            ", -1), 1))) <= :radiusKm " +
+            "ORDER BY l.created_at DESC",
             countQuery = "SELECT count(*) FROM custom_locations l " +
                     "WHERE l.is_deleted = false AND l.user_id = :userId AND " +
                     "l.latitude BETWEEN :minLat AND :maxLat AND " +
@@ -81,4 +83,3 @@ public interface CustomLocationRepository extends JpaRepository<CustomLocation, 
 
     Page<CustomLocation> findByUserAndIsDeletedFalse(User user, Pageable pageable);
 }
-

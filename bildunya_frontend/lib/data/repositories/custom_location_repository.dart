@@ -21,7 +21,6 @@ class CustomLocationRepository {
     bool mineOnly = false,
     int page = 0,
     int size = 200,
-    String sortBy = 'created_at',
   }) async {
     try {
       final res = await _dio.get<Map<String, dynamic>>(
@@ -33,7 +32,6 @@ class CustomLocationRepository {
           'mineOnly': mineOnly,
           'page': page,
           'size': size,
-          'sortBy': sortBy,
         },
       );
       final body = res.data;
@@ -85,6 +83,96 @@ class CustomLocationRepository {
 
       final res = await _dio.post<Map<String, dynamic>>(
         '/custom-locations',
+        data: form,
+      );
+      final body = res.data;
+      if (body == null) throw Exception('Boş yanıt');
+      return CustomLocationDto.fromJson(body);
+    } on DioException catch (e) {
+      throw Exception(dioErrorMessage(e));
+    }
+  }
+
+  /// `POST /custom-locations` — multipart: `data` (JSON) + `files` (görseller).
+  Future<CustomLocationDto> createWithFiles({
+    required CreateCustomLocationRequest request,
+    required List<String> filePaths,
+  }) async {
+    try {
+      if (filePaths.isEmpty) {
+        return await create(request: request);
+      }
+
+      final form = FormData();
+      form.files.add(
+        MapEntry(
+          'data',
+          MultipartFile.fromString(
+            jsonEncode(request.toJson()),
+            contentType: MediaType('application', 'json'),
+          ),
+        ),
+      );
+
+      for (final filePath in filePaths) {
+        final file = File(filePath);
+        if (!await file.exists()) {
+          throw Exception('Dosya bulunamadı');
+        }
+        final name = file.path.split(Platform.pathSeparator).last;
+        form.files.add(
+          MapEntry(
+            'files',
+            await MultipartFile.fromFile(
+              filePath,
+              filename: name,
+              contentType: _mediaType(name),
+            ),
+          ),
+        );
+      }
+
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/custom-locations',
+        data: form,
+      );
+      final body = res.data;
+      if (body == null) throw Exception('Boş yanıt');
+      return CustomLocationDto.fromJson(body);
+    } on DioException catch (e) {
+      throw Exception(dioErrorMessage(e));
+    }
+  }
+
+  /// `POST /custom-locations/{id}/photos` — multipart: `files`.
+  Future<CustomLocationDto> addPhotos({
+    required int id,
+    required List<String> filePaths,
+  }) async {
+    try {
+      if (filePaths.isEmpty) throw Exception('En az bir fotoğraf seçin.');
+
+      final form = FormData();
+      for (final filePath in filePaths) {
+        final file = File(filePath);
+        if (!await file.exists()) {
+          throw Exception('Dosya bulunamadı');
+        }
+        final name = file.path.split(Platform.pathSeparator).last;
+        form.files.add(
+          MapEntry(
+            'files',
+            await MultipartFile.fromFile(
+              filePath,
+              filename: name,
+              contentType: _mediaType(name),
+            ),
+          ),
+        );
+      }
+
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/custom-locations/$id/photos',
         data: form,
       );
       final body = res.data;

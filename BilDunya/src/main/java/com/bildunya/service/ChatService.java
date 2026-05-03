@@ -94,13 +94,13 @@ public class ChatService {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
         return chatConversationRepository.findConversationSummaries(user.getId(), pageable)
                 .map(p -> ConversationSummaryDto.builder()
-                        .id(p.getConversationId())
-                        .otherUserId(p.getOtherUserId())
+                        .id(toLongOrNull(p.getConversationId()))
+                        .otherUserId(toLongOrNull(p.getOtherUserId()))
                         .otherUsername(p.getOtherUsername())
                         .otherFullName(p.getOtherFullName())
                         .lastMessage(p.getLastMessageText())
                         .lastMessageAt(formatOrNull(p.getLastMessageCreatedAt(), formatter))
-                        .unreadCount(p.getUnreadCount() != null ? p.getUnreadCount() : 0L)
+                        .unreadCount(toLongOrDefault(p.getUnreadCount(), 0L))
                         .build());
     }
 
@@ -239,6 +239,14 @@ public class ChatService {
 
     private static String formatOrNull(LocalDateTime dt, DateTimeFormatter formatter) {
         return dt != null ? dt.format(formatter) : null;
+    }
+
+    private static Long toLongOrNull(Number value) {
+        return value != null ? value.longValue() : null;
+    }
+
+    private static Long toLongOrDefault(Number value, long defaultValue) {
+        return value != null ? value.longValue() : defaultValue;
     }
 
     private ChatMessageDto mapToDto(ChatMessage message) {

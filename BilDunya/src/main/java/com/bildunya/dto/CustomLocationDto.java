@@ -27,9 +27,11 @@ public class CustomLocationDto {
     @JsonProperty("image_url")
     private String imageUrl;
 
+    @JsonProperty("photo_urls")
+    private List<String> photoUrls;
+
     private List<String> tags;
 
     @JsonProperty("created_at")
     private String createdAt;
 }
-

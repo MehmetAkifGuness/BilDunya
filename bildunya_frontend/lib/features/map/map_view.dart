@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
@@ -9,9 +10,12 @@ import '../../core/constants/api_config.dart';
 import '../../core/constants/popular_locations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radii.dart';
+import '../../core/utils/app_snackbar.dart';
+import '../../core/utils/user_friendly_error.dart';
 import '../../core/widgets/content_verification_badge.dart';
 import '../../data/models/content_dto.dart';
 import '../../data/models/custom_location_dto.dart';
+import '../auth/providers/auth_provider.dart';
 import '../content/providers/contents_provider.dart';
 import '../content/screens/content_detail_view.dart';
 import 'providers/custom_locations_provider.dart';
@@ -226,10 +230,19 @@ class _MapViewState extends State<MapView> {
       return;
     }
     final sel = _selected;
-    final ok = sel != null && pins.any((e) => e.key == sel.key);
-    if (!ok) {
+    if (sel == null) {
       _selected = pins.first;
+      return;
     }
+
+    for (final p in pins) {
+      if (p.key == sel.key) {
+        _selected = p;
+        return;
+      }
+    }
+
+    _selected = pins.first;
   }
 
   void _openDetail(_ContentPin pin) {
@@ -281,6 +294,16 @@ class _MapViewState extends State<MapView> {
     return false;
   }
 
+  String _pinSemanticsLabel(_MapPin pin) {
+    final type = switch (pin) {
+      _ContentPin() => 'İçerik pini',
+      _PopularPin() => 'Popüler konum',
+      _CustomPin() => 'Kullanıcı pini',
+    };
+    final t = pin.title.trim().isNotEmpty ? pin.title.trim() : 'Pin';
+    return '$type: $t';
+  }
+
   List<_MapPin> _filteredPins() {
     final q = _searchController.text.trim();
 
@@ -308,6 +331,15 @@ class _MapViewState extends State<MapView> {
   }
 
   Future<void> _onMapTap(LatLng point) async {
+    final auth = context.read<AuthProvider>();
+    if (!auth.isAuthenticated) {
+      showAppSnackBar(
+        context,
+        'Konum eklemek için giriş yapın.',
+        isError: true,
+      );
+      return;
+    }
     setState(() => _pendingPoint = point);
 
     final created = await showModalBottomSheet<bool>(
@@ -352,38 +384,43 @@ class _MapViewState extends State<MapView> {
           width: 46,
           height: 46,
           point: pin.point,
-          child: GestureDetector(
-            onTap: () => setState(() => _selected = pin),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: _selected?.key == pin.key
-                    ? AppColors.primaryContainer
-                    : AppColors.surfaceContainer,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: AppColors.surfaceContainerLowest,
-                  width: 3,
-                ),
-                boxShadow: const [
-                  BoxShadow(
-                    blurRadius: 10,
-                    color: Colors.black45,
-                    offset: Offset(0, 3),
+          child: Semantics(
+            button: true,
+            label: _pinSemanticsLabel(pin),
+            hint: 'Detayları görmek için dokunun.',
+            child: GestureDetector(
+              onTap: () => setState(() => _selected = pin),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: _selected?.key == pin.key
+                      ? AppColors.primaryContainer
+                      : AppColors.surfaceContainer,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: AppColors.surfaceContainerLowest,
+                    width: 3,
                   ),
-                ],
-              ),
-              child: Icon(
-                pin is _CustomPin
-                    ? Symbols.place
-                    : (pin is _PopularPin ? Symbols.star : Symbols.location_on),
-                size: 26,
-                color: _selected?.key == pin.key
-                    ? AppColors.onPrimary
-                    : (pin is _CustomPin
-                        ? AppColors.error
-                        : (pin is _PopularPin
-                            ? AppColors.tertiary
-                            : AppColors.primaryContainer)),
+                  boxShadow: const [
+                    BoxShadow(
+                      blurRadius: 10,
+                      color: Colors.black45,
+                      offset: Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  pin is _CustomPin
+                      ? Symbols.place
+                      : (pin is _PopularPin ? Symbols.star : Symbols.location_on),
+                  size: 26,
+                  color: _selected?.key == pin.key
+                      ? AppColors.onPrimary
+                      : (pin is _CustomPin
+                          ? AppColors.error
+                          : (pin is _PopularPin
+                              ? AppColors.tertiary
+                              : AppColors.primaryContainer)),
+                ),
               ),
             ),
           ),
@@ -702,9 +739,17 @@ class _BottomPreviewCard extends StatelessWidget {
     }
 
     final p = pin!;
-    final url = p.imageUrl;
     final title = p.title;
     final subtitle = p.subtitle;
+    if (p is _CustomPin) {
+      return _CustomPinPreviewCard(
+        location: p.location,
+        title: title,
+        subtitle: subtitle,
+      );
+    }
+
+    final url = p.imageUrl;
     final isContent = p is _ContentPin;
 
     return Material(
@@ -832,6 +877,308 @@ class _BottomPreviewCard extends StatelessWidget {
                 ],
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CustomPinPreviewCard extends StatefulWidget {
+  const _CustomPinPreviewCard({
+    required this.location,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final CustomLocationDto location;
+  final String title;
+  final String subtitle;
+
+  @override
+  State<_CustomPinPreviewCard> createState() => _CustomPinPreviewCardState();
+}
+
+class _CustomPinPreviewCardState extends State<_CustomPinPreviewCard> {
+  final ImagePicker _picker = ImagePicker();
+  final PageController _pageController = PageController();
+  int _active = 0;
+
+  @override
+  void didUpdateWidget(covariant _CustomPinPreviewCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.location.id != widget.location.id) {
+      _active = 0;
+      if (_pageController.hasClients) {
+        _pageController.jumpToPage(0);
+      }
+    } else {
+      final maxIndex = _photos.length - 1;
+      if (maxIndex >= 0 && _active > maxIndex) {
+        _active = maxIndex;
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  List<String> get _photos {
+    final raw = widget.location.photoUrls ?? const <String>[];
+    final out = <String>[];
+    final seen = <String>{};
+    for (final p in raw) {
+      final t = p.trim();
+      if (t.isEmpty) continue;
+      if (!seen.add(t)) continue;
+      out.add(ApiConfig.resolveFileUrl(t));
+    }
+    return out;
+  }
+
+  Future<void> _addPhotos() async {
+    final locId = widget.location.id;
+    if (locId == null) return;
+
+    try {
+      final files = await _picker.pickMultiImage(
+        maxWidth: 2048,
+        maxHeight: 2048,
+        imageQuality: 88,
+      );
+      if (!mounted) return;
+      if (files.isEmpty) return;
+
+      final provider = context.read<CustomLocationsProvider>();
+      await provider.addPhotos(
+        locationId: locId,
+        imagePaths: files.map((e) => e.path).toList(),
+      );
+
+      if (!mounted) return;
+      showAppSnackBar(context, 'Fotoğraflar eklendi.');
+    } catch (e) {
+      if (!mounted) return;
+      showAppSnackBar(
+        context,
+        userFriendlyErrorMessage(e),
+        isError: true,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final photos = _photos;
+    final auth = context.watch<AuthProvider>();
+    final myId = auth.user?.id;
+    final isOwner = auth.isAuthenticated &&
+        myId != null &&
+        widget.location.userId != null &&
+        myId == widget.location.userId;
+
+    return Material(
+      elevation: 10,
+      color: AppColors.surfaceContainer.withValues(alpha: 0.96),
+      borderRadius: BorderRadius.circular(AppRadii.lg),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.title,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          color: AppColors.onSurface,
+                          fontWeight: FontWeight.w800,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Kullanıcı konumu',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: AppColors.secondary.withValues(alpha: 0.85),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        widget.subtitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: AppColors.secondary,
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      photos.isEmpty ? '0 foto' : '${photos.length} foto',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: AppColors.secondary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    if (isOwner)
+                      IconButton(
+                        tooltip: 'Fotoğraf ekle',
+                        onPressed: context.watch<CustomLocationsProvider>().creating
+                            ? null
+                            : _addPhotos,
+                        icon: const Icon(Symbols.add_a_photo),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (photos.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Text(
+                  isOwner
+                      ? 'Bu pine henüz fotoğraf eklemediniz.'
+                      : 'Bu pine henüz fotoğraf eklenmemiş.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppColors.secondary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              )
+            else
+              ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: SizedBox(
+                  height: 180,
+                  child: PageView.builder(
+                    controller: _pageController,
+                    itemCount: photos.length,
+                    onPageChanged: (i) => setState(() => _active = i),
+                    itemBuilder: (context, i) {
+                      final url = photos[i];
+                      return Semantics(
+                        label: 'Fotoğraf ${i + 1} / ${photos.length}',
+                        image: true,
+                        child: CachedNetworkImage(
+                          imageUrl: url,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => const ColoredBox(
+                            color: AppColors.surfaceVariant,
+                            child: Center(
+                              child: SizedBox(
+                                width: 28,
+                                height: 28,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => const ColoredBox(
+                            color: AppColors.surfaceVariant,
+                            child: Center(
+                              child: Icon(
+                                Symbols.broken_image,
+                                color: AppColors.secondary,
+                                size: 28,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            if (photos.length > 1) ...[
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 54,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: photos.length,
+                  separatorBuilder: (context, _) => const SizedBox(width: 8),
+                  itemBuilder: (context, i) {
+                    final selected = i == _active;
+                    final url = photos[i];
+                    return Semantics(
+                      button: true,
+                      label: 'Fotoğraf ${i + 1} küçük önizleme',
+                      hint: 'Seçmek için dokunun.',
+                      child: InkWell(
+                        onTap: () {
+                          _pageController.animateToPage(
+                            i,
+                            duration: const Duration(milliseconds: 220),
+                            curve: Curves.easeOut,
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            width: 54,
+                            height: 54,
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: selected
+                                    ? AppColors.primaryContainer
+                                    : AppColors.outlineVariant.withValues(
+                                        alpha: 0.25,
+                                      ),
+                                width: selected ? 2 : 1,
+                              ),
+                            ),
+                            child: CachedNetworkImage(
+                              imageUrl: url,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => const ColoredBox(
+                                color: AppColors.surfaceVariant,
+                                child: Center(
+                                  child: SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  ),
+                                ),
+                              ),
+                              errorWidget: (context, url, error) => const ColoredBox(
+                                color: AppColors.surfaceVariant,
+                                child: Center(
+                                  child: Icon(
+                                    Symbols.image_not_supported,
+                                    color: AppColors.secondary,
+                                    size: 18,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
           ],
         ),
       ),

@@ -14,9 +14,9 @@ import java.util.Optional;
 public interface ChatConversationRepository extends JpaRepository<ChatConversation, Long> {
 
     interface ConversationSummaryProjection {
-        Long getConversationId();
+        Number getConversationId();
 
-        Long getOtherUserId();
+        Number getOtherUserId();
 
         String getOtherUsername();
 
@@ -26,7 +26,7 @@ public interface ChatConversationRepository extends JpaRepository<ChatConversati
 
         java.time.LocalDateTime getLastMessageCreatedAt();
 
-        Long getUnreadCount();
+        Number getUnreadCount();
     }
 
     Optional<ChatConversation> findByUser1_IdAndUser2_IdAndIsDeletedFalse(Long user1Id, Long user2Id);

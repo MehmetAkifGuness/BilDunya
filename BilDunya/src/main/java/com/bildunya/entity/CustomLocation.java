@@ -51,9 +51,13 @@ public class CustomLocation extends BaseEntity {
     @Column(name = "image_url")
     private String imageUrl;
 
+    @Column(name = "photo_urls", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Builder.Default
+    private List<String> photoUrls = new ArrayList<>();
+
     @Column(name = "tags", columnDefinition = "jsonb")
     @JdbcTypeCode(SqlTypes.JSON)
     @Builder.Default
     private List<String> tags = new ArrayList<>();
 }
-

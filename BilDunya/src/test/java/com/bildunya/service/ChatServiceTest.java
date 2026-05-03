@@ -1,6 +1,7 @@
 package com.bildunya.service;
 
 import com.bildunya.dto.SendChatMessageRequest;
+import com.bildunya.dto.ConversationSummaryDto;
 import com.bildunya.entity.ChatConversation;
 import com.bildunya.entity.ChatMessage;
 import com.bildunya.entity.User;
@@ -14,6 +15,8 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
+import java.math.BigInteger;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -152,5 +155,81 @@ class ChatServiceTest {
         verify(chatConversationRepository).findByUser1_IdAndUser2_IdAndIsDeletedFalse(1L, 2L);
         verify(chatConversationRepository, never()).saveAndFlush(any(ChatConversation.class));
         verify(chatMessageRepository).attachConversationIdToExistingMessages(77L, 1L, 2L);
+    }
+
+    @Test
+    void getConversations_handlesNumericProjectionTypes() {
+        ChatMessageRepository chatMessageRepository = mock(ChatMessageRepository.class);
+        ChatConversationRepository chatConversationRepository = mock(ChatConversationRepository.class);
+        UserRepository userRepository = mock(UserRepository.class);
+        SimpMessagingTemplate messagingTemplate = mock(SimpMessagingTemplate.class);
+
+        ChatService service = new ChatService(
+                chatMessageRepository,
+                chatConversationRepository,
+                userRepository,
+                messagingTemplate
+        );
+
+        User me = User.builder().username("me").build();
+        me.setId(9L);
+        when(userRepository.findByUsername("me")).thenReturn(Optional.of(me));
+
+        LocalDateTime lastAt = LocalDateTime.of(2026, 5, 4, 12, 30, 15);
+        ChatConversationRepository.ConversationSummaryProjection proj =
+                new ChatConversationRepository.ConversationSummaryProjection() {
+                    @Override
+                    public Number getConversationId() {
+                        return BigInteger.valueOf(100);
+                    }
+
+                    @Override
+                    public Number getOtherUserId() {
+                        return BigInteger.valueOf(200);
+                    }
+
+                    @Override
+                    public String getOtherUsername() {
+                        return "other";
+                    }
+
+                    @Override
+                    public String getOtherFullName() {
+                        return "Other User";
+                    }
+
+                    @Override
+                    public String getLastMessageText() {
+                        return "hi";
+                    }
+
+                    @Override
+                    public LocalDateTime getLastMessageCreatedAt() {
+                        return lastAt;
+                    }
+
+                    @Override
+                    public Number getUnreadCount() {
+                        return BigInteger.valueOf(3);
+                    }
+                };
+
+        PageRequest pageable = PageRequest.of(0, 50);
+        when(chatConversationRepository.findConversationSummaries(9L, pageable))
+                .thenReturn(new PageImpl<>(List.of(proj), pageable, 1));
+
+        Page<ConversationSummaryDto> page = service.getConversations("me", pageable);
+
+        assertEquals(1, page.getTotalElements());
+        ConversationSummaryDto dto = page.getContent().getFirst();
+        assertEquals(100L, dto.getId());
+        assertEquals(200L, dto.getOtherUserId());
+        assertEquals("other", dto.getOtherUsername());
+        assertEquals("Other User", dto.getOtherFullName());
+        assertEquals("hi", dto.getLastMessage());
+        assertEquals("2026-05-04T12:30:15", dto.getLastMessageAt());
+        assertEquals(3L, dto.getUnreadCount());
+
+        verifyNoInteractions(messagingTemplate);
     }
 }

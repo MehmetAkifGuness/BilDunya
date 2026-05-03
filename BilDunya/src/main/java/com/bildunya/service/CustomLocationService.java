@@ -31,17 +31,26 @@ public class CustomLocationService {
     private static final int MAX_NAME_LENGTH = 200;
     private static final int MAX_DESCRIPTION_LENGTH = 2000;
     private static final int MAX_TAGS = 25;
+    private static final int MAX_PHOTOS_TOTAL = 20;
+    private static final int MAX_PHOTOS_PER_REQUEST = 10;
 
     private final CustomLocationRepository customLocationRepository;
     private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
 
     public CustomLocationDto createCustomLocation(String username, CreateCustomLocationRequest request) {
-        return createCustomLocationWithOptionalImage(username, request, null);
+        return createCustomLocationWithOptionalImages(username, request, List.of());
     }
 
     public CustomLocationDto createCustomLocationWithImage(String username, CreateCustomLocationRequest request, MultipartFile image) {
-        return createCustomLocationWithOptionalImage(username, request, image);
+        if (image == null || image.isEmpty()) {
+            return createCustomLocationWithOptionalImages(username, request, List.of());
+        }
+        return createCustomLocationWithOptionalImages(username, request, List.of(image));
+    }
+
+    public CustomLocationDto createCustomLocationWithImages(String username, CreateCustomLocationRequest request, List<MultipartFile> images) {
+        return createCustomLocationWithOptionalImages(username, request, images);
     }
 
     public CustomLocationDto getById(Long id) {
@@ -115,18 +124,76 @@ public class CustomLocationService {
         customLocationRepository.save(loc);
     }
 
-    private CustomLocationDto createCustomLocationWithOptionalImage(String username,
-                                                                   CreateCustomLocationRequest request,
-                                                                   MultipartFile image) {
+    public CustomLocationDto addPhotos(Long id, String username, List<MultipartFile> images) {
+        if (images == null || images.isEmpty()) {
+            throw new IllegalArgumentException("At least one image is required");
+        }
+        if (images.size() > MAX_PHOTOS_PER_REQUEST) {
+            throw new IllegalArgumentException("Too many photos (max " + MAX_PHOTOS_PER_REQUEST + " per request)");
+        }
+
+        CustomLocation loc = customLocationRepository.findById(id)
+                .filter(l -> !Boolean.TRUE.equals(l.getIsDeleted()))
+                .orElseThrow(() -> new ResourceNotFoundException("Custom location not found"));
+
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        normalizeAndValidateRequest(request, image);
-
-        String imageUrl = null;
-        if (image != null && !image.isEmpty()) {
-            imageUrl = fileStorageService.store(image, "custom_location_" + user.getId());
+        if (loc.getUser() == null || loc.getUser().getId() == null || user.getId() == null
+                || !loc.getUser().getId().equals(user.getId())) {
+            throw new UnauthorizedException("You can only modify your own custom locations");
         }
+
+        List<String> existing = loc.getPhotoUrls() != null ? new ArrayList<>(loc.getPhotoUrls()) : new ArrayList<>();
+        if (existing.size() >= MAX_PHOTOS_TOTAL) {
+            throw new IllegalArgumentException("Photo limit reached (max " + MAX_PHOTOS_TOTAL + ")");
+        }
+
+        for (MultipartFile image : images) {
+            validateImageUpload(image);
+        }
+
+        for (MultipartFile image : images) {
+            if (existing.size() >= MAX_PHOTOS_TOTAL) break;
+            if (image == null || image.isEmpty()) continue;
+            String url = fileStorageService.store(image, "custom_location_" + user.getId());
+            if (url != null && !url.isBlank()) {
+                existing.add(url.trim());
+            }
+        }
+
+        if ((loc.getImageUrl() == null || loc.getImageUrl().isBlank()) && !existing.isEmpty()) {
+            loc.setImageUrl(existing.getFirst());
+        }
+        loc.setPhotoUrls(existing);
+
+        loc = customLocationRepository.save(loc);
+        return mapToDto(loc);
+    }
+
+    private CustomLocationDto createCustomLocationWithOptionalImages(String username,
+                                                                    CreateCustomLocationRequest request,
+                                                                    List<MultipartFile> images) {
+        List<MultipartFile> safeImages = images != null ? images : List.of();
+        if (safeImages.size() > MAX_PHOTOS_PER_REQUEST) {
+            throw new IllegalArgumentException("Too many photos (max " + MAX_PHOTOS_PER_REQUEST + " per request)");
+        }
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        normalizeAndValidateRequest(request, safeImages);
+
+        List<String> photoUrls = new ArrayList<>();
+        for (MultipartFile image : safeImages) {
+            if (image == null || image.isEmpty()) continue;
+            String url = fileStorageService.store(image, "custom_location_" + user.getId());
+            if (url != null && !url.isBlank()) {
+                photoUrls.add(url.trim());
+            }
+        }
+
+        String imageUrl = photoUrls.isEmpty() ? null : photoUrls.getFirst();
 
         CustomLocation loc = CustomLocation.builder()
                 .user(user)
@@ -135,6 +202,7 @@ public class CustomLocationService {
                 .latitude(request.getLatitude())
                 .longitude(request.getLongitude())
                 .imageUrl(trimToNull(imageUrl))
+                .photoUrls(photoUrls)
                 .tags(normalizeTags(request.getTags()))
                 .build();
         loc.setIsDeleted(false);
@@ -143,7 +211,7 @@ public class CustomLocationService {
         return mapToDto(loc);
     }
 
-    private void normalizeAndValidateRequest(CreateCustomLocationRequest request, MultipartFile image) {
+    private void normalizeAndValidateRequest(CreateCustomLocationRequest request, List<MultipartFile> images) {
         if (request == null) {
             throw new IllegalArgumentException("Request body is required");
         }
@@ -166,11 +234,18 @@ public class CustomLocationService {
             throw new IllegalArgumentException("Too many tags (max " + MAX_TAGS + ")");
         }
 
-        if (image != null && !image.isEmpty()) {
-            String contentType = image.getContentType() != null ? image.getContentType().toLowerCase(Locale.ROOT) : "";
-            if (!contentType.startsWith("image/")) {
-                throw new IllegalArgumentException("Only image uploads are supported");
+        if (images != null) {
+            for (MultipartFile image : images) {
+                validateImageUpload(image);
             }
+        }
+    }
+
+    private static void validateImageUpload(MultipartFile image) {
+        if (image == null || image.isEmpty()) return;
+        String contentType = image.getContentType() != null ? image.getContentType().toLowerCase(Locale.ROOT) : "";
+        if (!contentType.startsWith("image/")) {
+            throw new IllegalArgumentException("Only image uploads are supported");
         }
     }
 
@@ -184,6 +259,7 @@ public class CustomLocationService {
                 .latitude(loc.getLatitude())
                 .longitude(loc.getLongitude())
                 .imageUrl(loc.getImageUrl())
+                .photoUrls(loc.getPhotoUrls() != null ? loc.getPhotoUrls() : List.of())
                 .tags(loc.getTags() != null ? loc.getTags() : List.of())
                 .createdAt(loc.getCreatedAt() != null ? loc.getCreatedAt().format(formatter) : null)
                 .build();
@@ -260,4 +336,3 @@ public class CustomLocationService {
         return new BoundingBox(minLat, maxLat, minLon, maxLon, wrapsLon);
     }
 }
-

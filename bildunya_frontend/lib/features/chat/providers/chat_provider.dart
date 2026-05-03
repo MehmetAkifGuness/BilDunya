@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:stomp_dart_client/stomp_dart_client.dart';
 
 import '../../../core/constants/api_config.dart';
+import '../../../core/utils/user_friendly_error.dart';
 import '../../../data/models/chat_message_dto.dart';
 import '../../../data/models/send_message_request.dart';
 import '../../../data/repositories/chat_repository.dart';
@@ -52,7 +53,7 @@ class ChatProvider extends ChangeNotifier {
         ..addAll(list);
       await _repository.markConversationAsRead(conversationId);
     } catch (e) {
-      error = e.toString();
+      error = userFriendlyErrorMessage(e);
     } finally {
       loading = false;
       notifyListeners();
@@ -125,7 +126,7 @@ class ChatProvider extends ChangeNotifier {
       notifyListeners();
       return null;
     } catch (e) {
-      return e.toString();
+      return userFriendlyErrorMessage(e);
     } finally {
       sending = false;
       notifyListeners();

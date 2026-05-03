@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radii.dart';
 import '../../../core/utils/app_snackbar.dart';
+import '../../../core/utils/user_friendly_error.dart';
 import '../../../data/models/create_custom_location_request.dart';
 import '../providers/custom_locations_provider.dart';
 
@@ -32,7 +33,8 @@ class _CreateCustomLocationSheetState extends State<CreateCustomLocationSheet> {
   final _tags = TextEditingController();
   final _picker = ImagePicker();
 
-  XFile? _image;
+  List<XFile> _images = const [];
+  int _activeImageIndex = 0;
 
   @override
   void dispose() {
@@ -42,17 +44,39 @@ class _CreateCustomLocationSheetState extends State<CreateCustomLocationSheet> {
     super.dispose();
   }
 
-  Future<void> _pickImage() async {
-    final file = await _picker.pickImage(
-      source: ImageSource.gallery,
+  Future<void> _pickImages() async {
+    final files = await _picker.pickMultiImage(
       maxWidth: 2048,
       maxHeight: 2048,
       imageQuality: 88,
     );
     if (!mounted) return;
-    if (file != null) {
-      setState(() => _image = file);
-    }
+    if (files.isEmpty) return;
+
+    setState(() {
+      final seen = <String>{};
+      final merged = <XFile>[..._images, ...files];
+      _images = [
+        for (final f in merged)
+          if (f.path.trim().isNotEmpty && seen.add(f.path)) f,
+      ].take(10).toList();
+      if (_activeImageIndex >= _images.length) {
+        _activeImageIndex = 0;
+      }
+    });
+  }
+
+  void _removeImageAt(int index) {
+    if (index < 0 || index >= _images.length) return;
+    setState(() {
+      final next = [..._images]..removeAt(index);
+      _images = next;
+      if (_images.isEmpty) {
+        _activeImageIndex = 0;
+      } else if (_activeImageIndex >= _images.length) {
+        _activeImageIndex = _images.length - 1;
+      }
+    });
   }
 
   List<String> _parseTags(String raw) {
@@ -81,7 +105,7 @@ class _CreateCustomLocationSheetState extends State<CreateCustomLocationSheet> {
     try {
       final created = await provider.createCustomLocation(
         request: req,
-        imagePath: _image?.path,
+        imagePaths: _images.map((e) => e.path).toList(),
       );
       if (!mounted) return;
       if (created == null) {
@@ -93,7 +117,7 @@ class _CreateCustomLocationSheetState extends State<CreateCustomLocationSheet> {
       if (!mounted) return;
       showAppSnackBar(
         context,
-        e.toString().replaceFirst('Exception: ', ''),
+        userFriendlyErrorMessage(e),
         isError: true,
       );
     }
@@ -185,7 +209,7 @@ class _CreateCustomLocationSheetState extends State<CreateCustomLocationSheet> {
                         color: AppColors.outlineVariant.withValues(alpha: 0.2),
                       ),
                     ),
-                    child: _image == null
+                    child: _images.isEmpty
                         ? Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -209,21 +233,86 @@ class _CreateCustomLocationSheetState extends State<CreateCustomLocationSheet> {
                         : ClipRRect(
                             borderRadius: BorderRadius.circular(AppRadii.lg),
                             child: Image.file(
-                              File(_image!.path),
+                              File(_images[_activeImageIndex].path),
                               fit: BoxFit.cover,
                               width: double.infinity,
                             ),
                           ),
                   ),
                 ),
+                if (_images.length > 1) ...[
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    height: 64,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _images.length,
+                      separatorBuilder: (context, _) => const SizedBox(width: 8),
+                      itemBuilder: (context, i) {
+                        final selected = i == _activeImageIndex;
+                        return Stack(
+                          children: [
+                            InkWell(
+                              onTap: () =>
+                                  setState(() => _activeImageIndex = i),
+                              borderRadius: BorderRadius.circular(12),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  width: 64,
+                                  height: 64,
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: selected
+                                          ? AppColors.primaryContainer
+                                          : AppColors.outlineVariant.withValues(
+                                              alpha: 0.35,
+                                            ),
+                                      width: selected ? 2 : 1,
+                                    ),
+                                  ),
+                                  child: Image.file(
+                                    File(_images[i].path),
+                                    fit: BoxFit.cover,
+                                    width: 64,
+                                    height: 64,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              top: 2,
+                              right: 2,
+                              child: IconButton(
+                                tooltip: 'Kaldır',
+                                onPressed: creating
+                                    ? null
+                                    : () => _removeImageAt(i),
+                                icon: const Icon(Symbols.close, size: 18),
+                                style: IconButton.styleFrom(
+                                  backgroundColor: Colors.black54,
+                                  foregroundColor: Colors.white,
+                                  padding: EdgeInsets.zero,
+                                  minimumSize: const Size(26, 26),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 10),
                 Row(
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: creating ? null : _pickImage,
+                        onPressed: creating ? null : _pickImages,
                         icon: const Icon(Symbols.add_a_photo),
-                        label: Text(_image == null ? 'Fotoğraf seç' : 'Değiştir'),
+                        label: Text(
+                          _images.isEmpty ? 'Fotoğraf seç' : 'Fotoğraf ekle',
+                        ),
                       ),
                     ),
                     const SizedBox(width: 10),

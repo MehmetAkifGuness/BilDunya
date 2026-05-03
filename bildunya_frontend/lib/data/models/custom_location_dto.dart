@@ -8,6 +8,7 @@ class CustomLocationDto {
     this.latitude,
     this.longitude,
     this.imageUrl,
+    this.photoUrls,
     this.tags,
     this.createdAt,
   });
@@ -19,6 +20,7 @@ class CustomLocationDto {
   final double? latitude;
   final double? longitude;
   final String? imageUrl;
+  final List<String>? photoUrls;
   final List<String>? tags;
   final String? createdAt;
 
@@ -30,6 +32,19 @@ class CustomLocationDto {
         if (t is String && t.trim().isNotEmpty) parsedTags.add(t);
       }
     }
+
+    final rawPhotos = json['photo_urls'] ?? json['photoUrls'];
+    final parsedPhotos = <String>[];
+    if (rawPhotos is List) {
+      for (final p in rawPhotos) {
+        if (p is String && p.trim().isNotEmpty) parsedPhotos.add(p.trim());
+      }
+    }
+
+    final imageUrl = json['image_url'] as String? ?? json['imageUrl'] as String?;
+    if (parsedPhotos.isEmpty && imageUrl != null && imageUrl.trim().isNotEmpty) {
+      parsedPhotos.add(imageUrl.trim());
+    }
     return CustomLocationDto(
       id: (json['id'] as num?)?.toInt(),
       userId: (json['user_id'] as num?)?.toInt() ?? (json['userId'] as num?)?.toInt(),
@@ -37,10 +52,10 @@ class CustomLocationDto {
       description: json['description'] as String?,
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
-      imageUrl: json['image_url'] as String? ?? json['imageUrl'] as String?,
+      imageUrl: imageUrl,
+      photoUrls: parsedPhotos,
       tags: parsedTags,
       createdAt: json['created_at'] as String? ?? json['createdAt'] as String?,
     );
   }
 }
-
