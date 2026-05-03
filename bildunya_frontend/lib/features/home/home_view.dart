@@ -12,7 +12,7 @@ import '../auth/screens/login_screen.dart';
 import '../content/providers/contents_provider.dart';
 import '../content/screens/content_detail_view.dart';
 
-/// Ana sayfa: karşılama + popüler bölgeler + önerilen / yakın içerikler.
+/// Ana sayfa: karşılama + önerilen / yakın içerikler.
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
 
@@ -21,14 +21,6 @@ class HomeView extends StatefulWidget {
 }
 
 class _HomeViewState extends State<HomeView> {
-  static const _popular = [
-    'Göreme Vadisi',
-    'Ürgüp',
-    'Avanos',
-    'Uçhisar',
-    'Ihlara',
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -107,41 +99,6 @@ class _HomeViewState extends State<HomeView> {
               ),
             ),
             const SizedBox(height: 28),
-            Text(
-              'Popüler bölgeler',
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: AppColors.onSurface,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 40,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: _popular.length,
-                separatorBuilder: (context, index) => const SizedBox(width: 10),
-                itemBuilder: (context, index) {
-                  return Chip(
-                    label: Text(
-                      _popular[index],
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        color: AppColors.onSurface,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    backgroundColor: AppColors.surfaceContainerLow,
-                    side: BorderSide(
-                      color: AppColors.outlineVariant.withValues(alpha: 0.2),
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadii.md),
-                    ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 22),
             if ((auth.user?.locationPreferences ?? '').trim().isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(bottom: 10),
