@@ -38,4 +38,11 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     int markConversationAsRead(
             @Param("receiverId") Long receiverId,
             @Param("senderId") Long senderId);
+
+    @Modifying
+    @Query("UPDATE ChatMessage m SET m.isRead = true " +
+            "WHERE m.isDeleted = false AND m.conversation.id = :conversationId AND m.receiver.id = :receiverId AND m.isRead = false")
+    int markConversationAsReadByConversationId(
+            @Param("conversationId") Long conversationId,
+            @Param("receiverId") Long receiverId);
 }

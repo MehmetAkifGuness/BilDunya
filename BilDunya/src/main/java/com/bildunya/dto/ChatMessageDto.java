@@ -14,6 +14,9 @@ public class ChatMessageDto {
 
     private Long id;
 
+    @JsonProperty("conversation_id")
+    private Long conversationId;
+
     @JsonProperty("sender_username")
     private String senderUsername;
 
@@ -28,4 +31,3 @@ public class ChatMessageDto {
     @JsonProperty("created_at")
     private String createdAt;
 }
-

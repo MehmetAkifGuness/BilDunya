@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -5,19 +6,21 @@ import 'package:stomp_dart_client/stomp_dart_client.dart';
 
 import '../../../core/constants/api_config.dart';
 import '../../../data/models/chat_message_dto.dart';
-import '../../../data/models/send_chat_message_request.dart';
+import '../../../data/models/send_message_request.dart';
 import '../../../data/repositories/chat_repository.dart';
 
 class ChatProvider extends ChangeNotifier {
   ChatProvider({
     required ChatRepository repository,
     required this.myUsername,
+    required this.conversationId,
     required this.peerUsername,
     required this.peerDisplayName,
   }) : _repository = repository;
 
   final ChatRepository _repository;
   final String myUsername;
+  final int conversationId;
   final String peerUsername;
   final String peerDisplayName;
 
@@ -38,12 +41,16 @@ class ChatProvider extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      final page = await _repository.getConversation(peerUsername, size: 100);
+      final page = await _repository.getConversationMessages(
+        conversationId,
+        size: 100,
+      );
       final list = List<ChatMessageDto>.from(page.content);
       list.sort((a, b) => (a.createdAt ?? '').compareTo(b.createdAt ?? ''));
       messages
         ..clear()
         ..addAll(list);
+      await _repository.markConversationAsRead(conversationId);
     } catch (e) {
       error = e.toString();
     } finally {
@@ -82,13 +89,16 @@ class ChatProvider extends ChangeNotifier {
         try {
           final map = jsonDecode(raw) as Map<String, dynamic>;
           final m = ChatMessageDto.fromJson(map);
-          if (!_involvesPeer(m)) return;
+          if (m.conversationId != conversationId) return;
           if (messages.any((x) => x.id != null && x.id == m.id)) return;
           messages.add(m);
           messages.sort(
             (a, b) => (a.createdAt ?? '').compareTo(b.createdAt ?? ''),
           );
           notifyListeners();
+          if (m.senderUsername != myUsername) {
+            unawaited(_repository.markConversationAsRead(conversationId));
+          }
         } catch (e) {
           debugPrint('[Chat] parse frame: $e');
         }
@@ -97,23 +107,14 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool _involvesPeer(ChatMessageDto m) {
-    final s = m.senderUsername;
-    final r = m.receiverUsername;
-    if (s == null || r == null) return false;
-    final peer = peerUsername;
-    final me = myUsername;
-    return (s == peer || r == peer) && (s == me || r == me);
-  }
-
   Future<String?> send(String text) async {
     final t = text.trim();
     if (t.isEmpty) return 'Mesaj boş olamaz.';
     sending = true;
     notifyListeners();
     try {
-      final m = await _repository.sendMessage(
-        SendChatMessageRequest(receiverUsername: peerUsername, text: t),
+      final m = await _repository.sendMessageToConversation(
+        SendMessageRequest(conversationId: conversationId, content: t),
       );
       if (!messages.any((x) => x.id != null && x.id == m.id)) {
         messages.add(m);

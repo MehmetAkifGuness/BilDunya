@@ -1,11 +1,15 @@
 package com.bildunya.service;
 
 import com.bildunya.dto.ChatMessageDto;
+import com.bildunya.dto.ConversationDto;
+import com.bildunya.dto.ConversationSummaryDto;
 import com.bildunya.dto.SendChatMessageRequest;
+import com.bildunya.dto.SendMessageRequest;
 import com.bildunya.entity.ChatConversation;
 import com.bildunya.entity.ChatMessage;
 import com.bildunya.entity.User;
 import com.bildunya.exception.ResourceNotFoundException;
+import com.bildunya.exception.UnauthorizedException;
 import com.bildunya.repository.ChatConversationRepository;
 import com.bildunya.repository.ChatMessageRepository;
 import com.bildunya.repository.UserRepository;
@@ -17,7 +21,9 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -36,25 +42,24 @@ public class ChatService {
         User receiver = userRepository.findByUsername(request.getReceiverUsername())
                 .orElseThrow(() -> new ResourceNotFoundException("Receiver not found"));
 
-        if (sender.getId() != null && sender.getId().equals(receiver.getId())) {
-            throw new IllegalArgumentException("Cannot send message to yourself");
-        }
-
         ChatConversation conversation = getOrCreateConversation(sender, receiver);
 
+        boolean isRead = sender.getId() != null && sender.getId().equals(receiver.getId());
         ChatMessage message = ChatMessage.builder()
                 .conversation(conversation)
                 .sender(sender)
                 .receiver(receiver)
                 .text(request.getText())
-                .isRead(false)
+                .isRead(isRead)
                 .build();
 
         message = chatMessageRepository.save(message);
         ChatMessageDto dto = mapToDto(message);
 
         messagingTemplate.convertAndSend("/topic/chat/" + receiver.getUsername(), dto);
-        messagingTemplate.convertAndSend("/topic/chat/" + sender.getUsername(), dto);
+        if (!Objects.equals(sender.getUsername(), receiver.getUsername())) {
+            messagingTemplate.convertAndSend("/topic/chat/" + sender.getUsername(), dto);
+        }
 
         return dto;
     }
@@ -65,10 +70,6 @@ public class ChatService {
 
         User other = userRepository.findByUsername(otherUsername)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-
-        if (user.getId() != null && user.getId().equals(other.getId())) {
-            return Page.empty(pageable);
-        }
 
         ChatConversation conversation = getOrCreateConversation(user, other);
 
@@ -83,11 +84,107 @@ public class ChatService {
         User other = userRepository.findByUsername(otherUsername)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        if (user.getId() != null && user.getId().equals(other.getId())) {
-            return 0;
+        return chatMessageRepository.markConversationAsRead(user.getId(), other.getId());
+    }
+
+    public Page<ConversationSummaryDto> getConversations(String username, Pageable pageable) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+        return chatConversationRepository.findConversationSummaries(user.getId(), pageable)
+                .map(p -> ConversationSummaryDto.builder()
+                        .id(p.getConversationId())
+                        .otherUserId(p.getOtherUserId())
+                        .otherUsername(p.getOtherUsername())
+                        .otherFullName(p.getOtherFullName())
+                        .lastMessage(p.getLastMessageText())
+                        .lastMessageAt(formatOrNull(p.getLastMessageCreatedAt(), formatter))
+                        .unreadCount(p.getUnreadCount() != null ? p.getUnreadCount() : 0L)
+                        .build());
+    }
+
+    public ConversationDto openConversation(String username, String otherUsername) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        User other = userRepository.findByUsername(otherUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        ChatConversation conversation = getOrCreateConversation(user, other);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+
+        User otherSide = resolveOtherSide(conversation, user);
+        return ConversationDto.builder()
+                .id(conversation.getId())
+                .user1Id(conversation.getUser1() != null ? conversation.getUser1().getId() : null)
+                .user2Id(conversation.getUser2() != null ? conversation.getUser2().getId() : null)
+                .otherUserId(otherSide != null ? otherSide.getId() : null)
+                .otherUsername(otherSide != null ? otherSide.getUsername() : null)
+                .otherFullName(otherSide != null ? otherSide.getFullName() : null)
+                .createdAt(formatOrNull(conversation.getCreatedAt(), formatter))
+                .build();
+    }
+
+    public Page<ChatMessageDto> getConversationMessages(String username, Long conversationId, Pageable pageable) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        ChatConversation conversation = chatConversationRepository.findById(conversationId)
+                .filter(c -> !Boolean.TRUE.equals(c.getIsDeleted()))
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
+
+        requireParticipant(conversation, user);
+
+        return chatMessageRepository.findByConversationId(conversation.getId(), pageable)
+                .map(this::mapToDto);
+    }
+
+    public ChatMessageDto sendMessageToConversation(String senderUsername, SendMessageRequest request) {
+        User sender = userRepository.findByUsername(senderUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("Sender not found"));
+
+        ChatConversation conversation = chatConversationRepository.findById(request.getConversationId())
+                .filter(c -> !Boolean.TRUE.equals(c.getIsDeleted()))
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
+
+        requireParticipant(conversation, sender);
+
+        User receiver = resolveOtherSide(conversation, sender);
+        if (receiver == null) {
+            throw new IllegalStateException("Conversation participant missing");
         }
 
-        return chatMessageRepository.markConversationAsRead(user.getId(), other.getId());
+        boolean isRead = sender.getId() != null && sender.getId().equals(receiver.getId());
+        ChatMessage message = ChatMessage.builder()
+                .conversation(conversation)
+                .sender(sender)
+                .receiver(receiver)
+                .text(request.getContent())
+                .isRead(isRead)
+                .build();
+
+        message = chatMessageRepository.save(message);
+        ChatMessageDto dto = mapToDto(message);
+
+        messagingTemplate.convertAndSend("/topic/chat/" + receiver.getUsername(), dto);
+        if (!Objects.equals(sender.getUsername(), receiver.getUsername())) {
+            messagingTemplate.convertAndSend("/topic/chat/" + sender.getUsername(), dto);
+        }
+        return dto;
+    }
+
+    public int markConversationAsRead(String username, Long conversationId) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        ChatConversation conversation = chatConversationRepository.findById(conversationId)
+                .filter(c -> !Boolean.TRUE.equals(c.getIsDeleted()))
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
+
+        requireParticipant(conversation, user);
+        if (user.getId() == null) return 0;
+        return chatMessageRepository.markConversationAsReadByConversationId(conversationId, user.getId());
     }
 
     private ChatConversation getOrCreateConversation(User a, User b) {
@@ -119,11 +216,37 @@ public class ChatService {
         return conversation;
     }
 
+    private void requireParticipant(ChatConversation conversation, User user) {
+        Long uid = user.getId();
+        if (uid == null) {
+            throw new IllegalStateException("User must be persisted");
+        }
+        Long user1Id = conversation.getUser1() != null ? conversation.getUser1().getId() : null;
+        Long user2Id = conversation.getUser2() != null ? conversation.getUser2().getId() : null;
+        if (!uid.equals(user1Id) && !uid.equals(user2Id)) {
+            throw new UnauthorizedException("You are not a participant in this conversation");
+        }
+    }
+
+    private User resolveOtherSide(ChatConversation conversation, User me) {
+        if (me.getId() == null) return null;
+        User u1 = conversation.getUser1();
+        User u2 = conversation.getUser2();
+        if (u1 != null && me.getId().equals(u1.getId())) return u2 != null ? u2 : u1;
+        if (u2 != null && me.getId().equals(u2.getId())) return u1 != null ? u1 : u2;
+        return null;
+    }
+
+    private static String formatOrNull(LocalDateTime dt, DateTimeFormatter formatter) {
+        return dt != null ? dt.format(formatter) : null;
+    }
+
     private ChatMessageDto mapToDto(ChatMessage message) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
         return ChatMessageDto.builder()
                 .id(message.getId())
+                .conversationId(message.getConversation() != null ? message.getConversation().getId() : null)
                 .senderUsername(message.getSender() != null ? message.getSender().getUsername() : null)
                 .receiverUsername(message.getReceiver() != null ? message.getReceiver().getUsername() : null)
                 .text(message.getText())

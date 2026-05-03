@@ -2,6 +2,7 @@
 class ChatMessageDto {
   const ChatMessageDto({
     this.id,
+    this.conversationId,
     this.senderUsername,
     this.receiverUsername,
     this.text,
@@ -10,6 +11,7 @@ class ChatMessageDto {
   });
 
   final int? id;
+  final int? conversationId;
   final String? senderUsername;
   final String? receiverUsername;
   final String? text;
@@ -19,6 +21,8 @@ class ChatMessageDto {
   factory ChatMessageDto.fromJson(Map<String, dynamic> json) {
     return ChatMessageDto(
       id: (json['id'] as num?)?.toInt(),
+      conversationId: (json['conversation_id'] as num?)?.toInt() ??
+          (json['conversationId'] as num?)?.toInt(),
       senderUsername: json['sender_username'] as String? ??
           json['senderUsername'] as String?,
       receiverUsername: json['receiver_username'] as String? ??

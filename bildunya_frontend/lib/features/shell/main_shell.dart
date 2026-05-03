@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../chat/screens/chat_inbox_view.dart';
 import '../content/screens/create_content_view.dart';
 import '../feed/feed_view.dart';
 import '../home/home_view.dart';
@@ -38,6 +39,7 @@ class _MainShellState extends State<MainShell> {
           HomeView(),
           MapView(),
           FeedView(),
+          ChatInboxView(),
           ProfileView(),
         ],
       ),
@@ -70,6 +72,11 @@ class _MainShellState extends State<MainShell> {
             icon: Icon(Symbols.dynamic_feed),
             selectedIcon: Icon(Symbols.dynamic_feed),
             label: 'Akış',
+          ),
+          NavigationDestination(
+            icon: Icon(Symbols.chat),
+            selectedIcon: Icon(Symbols.chat),
+            label: 'Mesajlar',
           ),
           NavigationDestination(
             icon: Icon(Symbols.person),

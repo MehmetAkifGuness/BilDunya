@@ -90,7 +90,7 @@ class _ContentDetailViewState extends State<ContentDetailView> {
     );
   }
 
-  void _openChat(ContentDto c) {
+  Future<void> _openChat(ContentDto c) async {
     final auth = context.read<AuthProvider>();
     if (!auth.isAuthenticated) {
       showAppSnackBar(context, 'Sohbet için giriş yapın.', isError: true);
@@ -98,7 +98,7 @@ class _ContentDetailViewState extends State<ContentDetailView> {
     }
     final me = auth.user?.username;
     final peer = c.user?.username;
-    if (me == null || peer == null || peer == me) {
+    if (me == null || peer == null) {
       showAppSnackBar(
         context,
         'Bu kullanıcıyla sohbet başlatılamıyor.',
@@ -107,19 +107,33 @@ class _ContentDetailViewState extends State<ContentDetailView> {
       return;
     }
     final name = c.user?.displayName ?? peer;
-    Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (ctx) => ChangeNotifierProvider(
-          create: (_) => ChatProvider(
-            repository: ctx.read<ChatRepository>(),
-            myUsername: me,
-            peerUsername: peer,
-            peerDisplayName: name,
-          )..init(),
-          child: const ChatView(),
+
+    try {
+      final conv = await context.read<ChatRepository>().openConversation(peer);
+      final convId = conv.id;
+      if (!mounted) return;
+      if (convId == null) {
+        showAppSnackBar(context, 'Sohbet acilamadi.', isError: true);
+        return;
+      }
+      Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(
+          builder: (ctx) => ChangeNotifierProvider(
+            create: (_) => ChatProvider(
+              repository: ctx.read<ChatRepository>(),
+              myUsername: me,
+              conversationId: convId,
+              peerUsername: peer,
+              peerDisplayName: name,
+            )..init(),
+            child: const ChatView(),
+          ),
         ),
-      ),
-    );
+      );
+    } catch (e) {
+      if (!mounted) return;
+      showAppSnackBar(context, e.toString(), isError: true);
+    }
   }
 
   Future<void> _openInExternalMap(ContentDto c) async {

@@ -2,13 +2,89 @@ import 'package:dio/dio.dart';
 
 import '../../core/network/dio_error_message.dart';
 import '../models/chat_message_dto.dart';
+import '../models/conversation_dto.dart';
+import '../models/paged_conversation_result.dart';
 import '../models/paged_chat_result.dart';
 import '../models/send_chat_message_request.dart';
+import '../models/send_message_request.dart';
 
 class ChatRepository {
   ChatRepository(this._dio);
 
   final Dio _dio;
+
+  Future<PagedConversationResult> getMyConversations({
+    int page = 0,
+    int size = 50,
+  }) async {
+    try {
+      final res = await _dio.get<Map<String, dynamic>>(
+        '/conversations',
+        queryParameters: {'page': page, 'size': size},
+      );
+      final body = res.data;
+      if (body == null) throw Exception('BoÅŸ yanÄ±t');
+      return PagedConversationResult.fromJson(body);
+    } on DioException catch (e) {
+      throw Exception(dioErrorMessage(e));
+    }
+  }
+
+  Future<ConversationDto> openConversation(String otherUsername) async {
+    try {
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/conversations',
+        data: {'otherUsername': otherUsername},
+      );
+      final body = res.data;
+      if (body == null) throw Exception('BoÅŸ yanÄ±t');
+      return ConversationDto.fromJson(body);
+    } on DioException catch (e) {
+      throw Exception(dioErrorMessage(e));
+    }
+  }
+
+  Future<PagedChatResult> getConversationMessages(
+    int conversationId, {
+    int page = 0,
+    int size = 50,
+  }) async {
+    try {
+      final res = await _dio.get<Map<String, dynamic>>(
+        '/conversations/$conversationId/messages',
+        queryParameters: {'page': page, 'size': size},
+      );
+      final body = res.data;
+      if (body == null) throw Exception('BoÅŸ yanÄ±t');
+      return PagedChatResult.fromJson(body);
+    } on DioException catch (e) {
+      throw Exception(dioErrorMessage(e));
+    }
+  }
+
+  Future<void> markConversationAsRead(int conversationId) async {
+    try {
+      await _dio.post<void>('/conversations/$conversationId/read');
+    } on DioException catch (e) {
+      throw Exception(dioErrorMessage(e));
+    }
+  }
+
+  Future<ChatMessageDto> sendMessageToConversation(
+    SendMessageRequest request,
+  ) async {
+    try {
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/messages',
+        data: request.toJson(),
+      );
+      final body = res.data;
+      if (body == null) throw Exception('BoÅŸ yanÄ±t');
+      return ChatMessageDto.fromJson(body);
+    } on DioException catch (e) {
+      throw Exception(dioErrorMessage(e));
+    }
+  }
 
   Future<PagedChatResult> getConversation(
     String peerUsername, {
