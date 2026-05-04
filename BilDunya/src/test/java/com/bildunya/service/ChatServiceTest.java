@@ -231,6 +231,11 @@ class ChatServiceTest {
                     public String getRelatedContentLabel() {
                         return "Kapadokya";
                     }
+
+                    @Override
+                    public String getLastMessageSenderUsername() {
+                        return "other";
+                    }
                 };
 
         PageRequest pageable = PageRequest.of(0, 50);

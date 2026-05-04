@@ -108,6 +108,7 @@ public class ChatService {
                         .otherUsername(p.getOtherUsername())
                         .otherFullName(p.getOtherFullName())
                         .lastMessage(p.getLastMessageText())
+                        .lastMessageSenderUsername(p.getLastMessageSenderUsername())
                         .lastMessageAt(formatTemporalOrNull(p.getLastMessageCreatedAt(), formatter))
                         .unreadCount(toLongOrDefault(p.getUnreadCount(), 0L))
                         .relatedContentId(toLongOrNull(p.getRelatedContentId()))

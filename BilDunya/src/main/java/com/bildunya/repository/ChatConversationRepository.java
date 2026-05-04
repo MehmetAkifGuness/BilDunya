@@ -31,6 +31,8 @@ public interface ChatConversationRepository extends JpaRepository<ChatConversati
         Number getRelatedContentId();
 
         String getRelatedContentLabel();
+
+        String getLastMessageSenderUsername();
     }
 
     Optional<ChatConversation> findByUser1_IdAndUser2_IdAndIsDeletedFalse(Long user1Id, Long user2Id);
@@ -38,8 +40,8 @@ public interface ChatConversationRepository extends JpaRepository<ChatConversati
     @Query(
             value = """
                     SELECT
-                        c.id AS "conversationId",
-                        CASE WHEN c.user1_id = :userId THEN u2.id ELSE u1.id END AS "otherUserId",
+                        c.id                                                            AS "conversationId",
+                        CASE WHEN c.user1_id = :userId THEN u2.id   ELSE u1.id   END  AS "otherUserId",
                         CASE WHEN c.user1_id = :userId THEN u2.username ELSE u1.username END AS "otherUsername",
                         CASE WHEN c.user1_id = :userId THEN u2.full_name ELSE u1.full_name END AS "otherFullName",
                         (
@@ -70,13 +72,21 @@ public interface ChatConversationRepository extends JpaRepository<ChatConversati
                             FROM contents ct
                             WHERE ct.id = c.related_content_id AND ct.is_deleted = false
                             LIMIT 1
-                        ) AS "relatedContentLabel"
+                        ) AS "relatedContentLabel",
+                        (
+                            SELECT sender.username
+                            FROM chat_messages m
+                            JOIN users sender ON sender.id = m.sender_id
+                            WHERE m.is_deleted = false AND m.conversation_id = c.id
+                            ORDER BY m.created_at DESC
+                            LIMIT 1
+                        ) AS "lastMessageSenderUsername"
                     FROM chat_conversations c
                     JOIN users u1 ON u1.id = c.user1_id
                     JOIN users u2 ON u2.id = c.user2_id
                     WHERE c.is_deleted = false
                       AND (c.user1_id = :userId OR c.user2_id = :userId)
-                    ORDER BY 6 DESC NULLS LAST, c.created_at DESC
+                    ORDER BY "lastMessageCreatedAt" DESC NULLS LAST, c.created_at DESC
                     """,
             countQuery = """
                     SELECT COUNT(*)
