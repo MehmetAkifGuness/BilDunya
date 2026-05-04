@@ -690,15 +690,14 @@ class _MapViewState extends State<MapView> {
 
     return Scaffold(
       backgroundColor: AppColors.surfaceContainerLowest,
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 100),
-        child: FloatingActionButton.extended(
-          onPressed: _togglePinPlacementMode,
-          icon: Icon(
-            _awaitingPinPlacement ? Symbols.close : Symbols.add_location_alt,
-          ),
-          label: Text(_awaitingPinPlacement ? 'İptal' : 'Pin ekle'),
+      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
+      floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'map_add_pin_fab',
+        onPressed: _togglePinPlacementMode,
+        icon: Icon(
+          _awaitingPinPlacement ? Symbols.close : Symbols.add_location_alt,
         ),
+        label: Text(_awaitingPinPlacement ? 'İptal' : 'Pin ekle'),
       ),
       body: Stack(
         children: [

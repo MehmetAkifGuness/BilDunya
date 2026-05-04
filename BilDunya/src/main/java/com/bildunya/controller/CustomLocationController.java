@@ -46,7 +46,9 @@ public class CustomLocationController {
     @Operation(summary = "Create new custom location")
     public ResponseEntity<CustomLocationDto> create(@Valid @RequestBody CreateCustomLocationRequest request) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserPrincipal principal)) {
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        }
         CustomLocationDto created = customLocationService.createCustomLocation(principal.getUsername(), request);
         return new ResponseEntity<>(created, HttpStatus.CREATED);
     }
@@ -60,7 +62,9 @@ public class CustomLocationController {
             @RequestPart(value = "files", required = false) List<MultipartFile> files) {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserPrincipal principal)) {
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        }
 
         List<MultipartFile> images = new ArrayList<>();
         if (files != null) {
@@ -93,7 +97,9 @@ public class CustomLocationController {
         }
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserPrincipal principal)) {
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        }
         CustomLocationDto updated = customLocationService.addPhotos(id, principal.getUsername(), images);
         return ResponseEntity.ok(updated);
     }
@@ -136,7 +142,9 @@ public class CustomLocationController {
     @Operation(summary = "Delete custom location (owner only)")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserPrincipal principal)) {
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        }
         customLocationService.delete(id, principal.getUsername());
         return ResponseEntity.noContent().build();
     }

@@ -46,9 +46,11 @@ class CustomLocationRepository {
     required CreateCustomLocationRequest request,
   }) async {
     try {
+      final payload = jsonEncode(request.toJson());
       final res = await _dio.post<Map<String, dynamic>>(
         '/custom-locations',
-        data: request.toJson(),
+        data: payload,
+        options: Options(contentType: Headers.jsonContentType),
       );
       final body = res.data;
       if (body == null) throw Exception('Boş yanıt');
