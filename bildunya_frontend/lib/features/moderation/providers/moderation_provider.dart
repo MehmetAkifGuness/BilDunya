@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../core/utils/user_friendly_error.dart';
 import '../../../data/models/content_dto.dart';
 import '../../../data/repositories/content_repository.dart';
 
@@ -35,7 +36,7 @@ class ModerationProvider extends ChangeNotifier {
       queue = page.content;
     } catch (e) {
       queue = [];
-      error = e.toString();
+      error = userFriendlyErrorMessage(e);
     } finally {
       loading = false;
       notifyListeners();
@@ -52,7 +53,7 @@ class ModerationProvider extends ChangeNotifier {
       await loadQueue(status: selectedStatus);
       return null;
     } catch (e) {
-      return e.toString();
+      return userFriendlyErrorMessage(e);
     } finally {
       acting = false;
       notifyListeners();
@@ -72,7 +73,7 @@ class ModerationProvider extends ChangeNotifier {
       await loadQueue(status: selectedStatus);
       return null;
     } catch (e) {
-      return e.toString();
+      return userFriendlyErrorMessage(e);
     } finally {
       acting = false;
       notifyListeners();

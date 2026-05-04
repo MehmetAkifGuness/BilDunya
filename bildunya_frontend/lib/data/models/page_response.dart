@@ -21,8 +21,12 @@ class PagedContentResult {
     final list = <ContentDto>[];
     if (raw is List) {
       for (final e in raw) {
-        if (e is Map<String, dynamic>) {
-          list.add(ContentDto.fromJson(e));
+        if (e is Map) {
+          try {
+            list.add(ContentDto.fromJson(Map<String, dynamic>.from(e)));
+          } catch (_) {
+            // Skip malformed rows instead of breaking the whole list.
+          }
         }
       }
     }

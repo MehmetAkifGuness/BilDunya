@@ -282,22 +282,26 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
     }
 
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResourceFoundException(
+            NoResourceFoundException ex, WebRequest request) {
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .status(HttpStatus.NOT_FOUND.value())
+                .message("Endpoint bulunamadı.")
+                .error("Not Found")
+                .timestamp(LocalDateTime.now())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGlobalException(
             Exception ex, WebRequest request) {
 
-        if (ex instanceof NoResourceFoundException) {
-            ErrorResponse errorResponse = ErrorResponse.builder()
-                    .status(HttpStatus.NOT_FOUND.value())
-                    .message("Endpoint bulunamadı.")
-                    .error("Not Found")
-                    .timestamp(LocalDateTime.now())
-                    .path(request.getDescription(false).replace("uri=", ""))
-                    .build();
-            return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
-        }
-
-        log.error("Unhandled exception: {}", ex.getMessage(), ex);
+        log.error("Unexpected error", ex);
 
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.value())

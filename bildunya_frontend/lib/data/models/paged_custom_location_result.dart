@@ -21,8 +21,12 @@ class PagedCustomLocationResult {
     final list = <CustomLocationDto>[];
     if (raw is List) {
       for (final e in raw) {
-        if (e is Map<String, dynamic>) {
-          list.add(CustomLocationDto.fromJson(e));
+        if (e is Map) {
+          try {
+            list.add(CustomLocationDto.fromJson(Map<String, dynamic>.from(e)));
+          } catch (_) {
+            // Skip malformed rows instead of breaking the whole list.
+          }
         }
       }
     }

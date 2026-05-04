@@ -17,6 +17,8 @@ import com.bildunya.repository.ChatMessageRepository;
 import com.bildunya.repository.ContentRepository;
 import com.bildunya.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -37,6 +39,8 @@ import java.util.Objects;
 @RequiredArgsConstructor
 @Transactional
 public class ChatService {
+
+    private static final Logger log = LoggerFactory.getLogger(ChatService.class);
 
     private final ChatMessageRepository chatMessageRepository;
     private final ChatConversationRepository chatConversationRepository;
@@ -115,7 +119,17 @@ public class ChatService {
                         .relatedContentId(toLongOrNull(p.getRelatedContentId()))
                         .relatedContentLabel(trimToNull(p.getRelatedContentLabel()))
                         .build());
-        page.forEach(dto -> enrichConversationSummary(dto, user.getId(), formatter));
+        page.forEach(dto -> {
+            try {
+                enrichConversationSummary(dto, user.getId(), formatter);
+            } catch (Exception e) {
+                log.warn(
+                        "Conversation summary enrichment skipped for conversationId={}: {}",
+                        dto != null ? dto.getId() : null,
+                        e.getMessage(),
+                        e);
+            }
+        });
         return page;
     }
 

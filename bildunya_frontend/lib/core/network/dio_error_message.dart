@@ -20,7 +20,11 @@ String dioErrorMessage(DioException e) {
         m.toLowerCase() != 'unauthorized') {
       return m;
     }
-    return 'Oturum bulunamadı / süresi dolmuş olabilir. Lütfen tekrar giriş yap.';
+    return 'Oturum süren dolmuş olabilir. Lütfen tekrar giriş yap.';
+  }
+
+  if (statusCode != null && statusCode >= 500) {
+    return 'Sunucuda hata oluştu. Lütfen daha sonra tekrar deneyin.';
   }
 
   if (extractedMessage != null && extractedMessage.isNotEmpty) {

@@ -14,7 +14,7 @@ public interface CustomLocationRepository extends JpaRepository<CustomLocation, 
 
     @Query(value = "SELECT * FROM custom_locations l " +
             "WHERE l.is_deleted = false AND " +
-            "l.verification_status = 'APPROVED' AND " +
+            "(l.verification_status = 'APPROVED' OR l.verification_status IS NULL OR l.verification_status = 'VERIFIED') AND " +
             "l.latitude BETWEEN :minLat AND :maxLat AND " +
             "( " +
             "(:wrapsLon = false AND l.longitude BETWEEN :minLon AND :maxLon) OR " +
@@ -27,7 +27,7 @@ public interface CustomLocationRepository extends JpaRepository<CustomLocation, 
             "ORDER BY l.created_at DESC",
             countQuery = "SELECT count(*) FROM custom_locations l " +
                     "WHERE l.is_deleted = false AND " +
-                    "l.verification_status = 'APPROVED' AND " +
+                    "(l.verification_status = 'APPROVED' OR l.verification_status IS NULL OR l.verification_status = 'VERIFIED') AND " +
                     "l.latitude BETWEEN :minLat AND :maxLat AND " +
                     "( " +
                     "(:wrapsLon = false AND l.longitude BETWEEN :minLon AND :maxLon) OR " +
@@ -50,7 +50,7 @@ public interface CustomLocationRepository extends JpaRepository<CustomLocation, 
 
     @Query(value = "SELECT * FROM custom_locations l " +
             "WHERE l.is_deleted = false AND l.user_id = :userId AND " +
-            "l.verification_status = 'APPROVED' AND " +
+            "(l.verification_status = 'APPROVED' OR l.verification_status IS NULL OR l.verification_status = 'VERIFIED') AND " +
             "l.latitude BETWEEN :minLat AND :maxLat AND " +
             "( " +
             "(:wrapsLon = false AND l.longitude BETWEEN :minLon AND :maxLon) OR " +
@@ -63,7 +63,7 @@ public interface CustomLocationRepository extends JpaRepository<CustomLocation, 
             "ORDER BY l.created_at DESC",
             countQuery = "SELECT count(*) FROM custom_locations l " +
                     "WHERE l.is_deleted = false AND l.user_id = :userId AND " +
-                    "l.verification_status = 'APPROVED' AND " +
+                    "(l.verification_status = 'APPROVED' OR l.verification_status IS NULL OR l.verification_status = 'VERIFIED') AND " +
                     "l.latitude BETWEEN :minLat AND :maxLat AND " +
                     "( " +
                     "(:wrapsLon = false AND l.longitude BETWEEN :minLon AND :maxLon) OR " +

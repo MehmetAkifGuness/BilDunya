@@ -23,7 +23,7 @@ public interface ContentRepository extends JpaRepository<Content, Long> {
     @Query(value = "SELECT * FROM contents c " +
             "WHERE c.is_deleted = false AND " +
             "c.latitude BETWEEN :minLat AND :maxLat AND " +
-            "c.verification_status = 'APPROVED' AND " +
+            "(c.verification_status = 'APPROVED' OR c.verification_status IS NULL OR c.verification_status = 'VERIFIED') AND " +
             "( " +
             "(:wrapsLon = false AND c.longitude BETWEEN :minLon AND :maxLon) OR " +
             "(:wrapsLon = true AND (c.longitude >= :minLon OR c.longitude <= :maxLon)) " +
@@ -34,7 +34,7 @@ public interface ContentRepository extends JpaRepository<Content, Long> {
             ", -1), 1))) <= :radiusKm",
             countQuery = "SELECT count(*) FROM contents c " +
                     "WHERE c.is_deleted = false AND " +
-                    "c.verification_status = 'APPROVED' AND " +
+                    "(c.verification_status = 'APPROVED' OR c.verification_status IS NULL OR c.verification_status = 'VERIFIED') AND " +
                     "c.latitude BETWEEN :minLat AND :maxLat AND " +
                     "( " +
                     "(:wrapsLon = false AND c.longitude BETWEEN :minLon AND :maxLon) OR " +
@@ -55,7 +55,7 @@ public interface ContentRepository extends JpaRepository<Content, Long> {
                                      @Param("wrapsLon") Boolean wrapsLon,
                                      Pageable pageable);
 
-    @Query("SELECT c FROM Content c WHERE c.isDeleted = false AND c.verificationStatus = 'APPROVED'")
+    @Query("SELECT c FROM Content c WHERE c.isDeleted = false AND (c.verificationStatus = 'APPROVED' OR c.verificationStatus IS NULL OR c.verificationStatus = 'VERIFIED')")
     Page<Content> findApprovedContent(Pageable pageable);
 
     List<Content> findByVerificationStatus(String verificationStatus);

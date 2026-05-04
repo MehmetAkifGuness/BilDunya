@@ -49,11 +49,14 @@ public class SecurityConfig {
                                 "/auth/verify-email",
                                 "/auth/resend-verification",
                                 "/auth/health",
+                                "/api/auth/health",
                                 "/auth/user/**")
                         .permitAll()
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/ws/**", "/api/ws", "/api/ws/**").permitAll()
-                        .requestMatchers("/health", "/error").permitAll()
+                        .requestMatchers("/health", "/api/health", "/error").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/contents/nearby", "/api/contents/nearby").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/custom-locations/nearby", "/api/custom-locations/nearby").permitAll()
                         .anyRequest().authenticated()
                 )
                 // Doğru filtre sırası hizalaması

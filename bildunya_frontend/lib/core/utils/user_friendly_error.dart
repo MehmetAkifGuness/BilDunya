@@ -26,8 +26,12 @@ String userFriendlyErrorMessage(Object error) {
   if (lower.contains('not authorized') || lower.contains('unauthorized')) {
     return 'Bu işlem için yetkiniz yok. Lütfen tekrar giriş yapın.';
   }
-  if (lower == 'an unexpected error occurred') {
-    return 'Sunucuda bir hata oluştu. Lütfen daha sonra tekrar deneyin.';
+  if (lower.contains('forbidden')) {
+    return 'Oturum süren dolmuş olabilir. Lütfen tekrar giriş yapın.';
+  }
+  if (lower == 'an unexpected error occurred' ||
+      lower.contains('internal server error')) {
+    return 'Sunucuda hata oluştu. Lütfen daha sonra tekrar deneyin.';
   }
 
   return message.isNotEmpty ? message : 'Beklenmeyen bir hata oluştu.';
