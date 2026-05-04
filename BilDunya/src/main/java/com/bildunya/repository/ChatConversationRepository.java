@@ -27,6 +27,10 @@ public interface ChatConversationRepository extends JpaRepository<ChatConversati
         Object getLastMessageCreatedAt();
 
         Number getUnreadCount();
+
+        Number getRelatedContentId();
+
+        String getRelatedContentLabel();
     }
 
     Optional<ChatConversation> findByUser1_IdAndUser2_IdAndIsDeletedFalse(Long user1Id, Long user2Id);
@@ -59,7 +63,14 @@ public interface ChatConversationRepository extends JpaRepository<ChatConversati
                               AND m.conversation_id = c.id
                               AND m.receiver_id = :userId
                               AND m.is_read = false
-                        ) AS "unreadCount"
+                        ) AS "unreadCount",
+                        c.related_content_id AS "relatedContentId",
+                        (
+                            SELECT COALESCE(NULLIF(TRIM(ct.location_name), ''), LEFT(ct.description, 100))
+                            FROM contents ct
+                            WHERE ct.id = c.related_content_id AND ct.is_deleted = false
+                            LIMIT 1
+                        ) AS "relatedContentLabel"
                     FROM chat_conversations c
                     JOIN users u1 ON u1.id = c.user1_id
                     JOIN users u2 ON u2.id = c.user2_id

@@ -8,6 +8,8 @@ class ConversationDto {
     this.otherUsername,
     this.otherFullName,
     this.createdAt,
+    this.relatedContentId,
+    this.relatedContentLabel,
   });
 
   final int? id;
@@ -17,6 +19,8 @@ class ConversationDto {
   final String? otherUsername;
   final String? otherFullName;
   final String? createdAt;
+  final int? relatedContentId;
+  final String? relatedContentLabel;
 
   factory ConversationDto.fromJson(Map<String, dynamic> json) {
     return ConversationDto(
@@ -32,6 +36,10 @@ class ConversationDto {
       otherFullName: json['other_full_name'] as String? ??
           json['otherFullName'] as String?,
       createdAt: json['created_at'] as String? ?? json['createdAt'] as String?,
+      relatedContentId: (json['related_content_id'] as num?)?.toInt() ??
+          (json['relatedContentId'] as num?)?.toInt(),
+      relatedContentLabel: json['related_content_label'] as String? ??
+          json['relatedContentLabel'] as String?,
     );
   }
 }

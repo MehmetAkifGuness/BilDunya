@@ -74,6 +74,7 @@ class ChatInboxView extends StatelessWidget {
             conversationId: convId,
             peerUsername: username,
             peerDisplayName: display,
+            relatedContentLabel: null,
           )..init(),
           child: const ChatView(),
         ),
@@ -97,6 +98,7 @@ class ChatInboxView extends StatelessWidget {
     final name = (c.otherFullName ?? '').trim().isNotEmpty
         ? c.otherFullName!.trim()
         : peer;
+    final relatedLabel = (c.relatedContentLabel ?? '').trim();
 
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
@@ -107,6 +109,8 @@ class ChatInboxView extends StatelessWidget {
             conversationId: convId,
             peerUsername: peer,
             peerDisplayName: name,
+            relatedContentLabel:
+                relatedLabel.isEmpty ? null : relatedLabel,
           )..init(),
           child: const ChatView(),
         ),
@@ -148,44 +152,6 @@ class ChatInboxView extends StatelessWidget {
                 );
               }
 
-              if (p.error != null && p.conversations.isEmpty) {
-                return Scaffold(
-                  backgroundColor: AppColors.surfaceContainerLowest,
-                  appBar: AppBar(title: const Text('Mesajlar')),
-                  body: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            p.error!,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: AppColors.error),
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              FilledButton(
-                                onPressed: p.load,
-                                child: const Text('Yeniden dene'),
-                              ),
-                              const SizedBox(width: 10),
-                              OutlinedButton.icon(
-                                onPressed: () => _promptAndOpenChat(context),
-                                icon: const Icon(Symbols.chat),
-                                label: const Text('Sohbet başlat'),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              }
-
               return Scaffold(
                 backgroundColor: AppColors.surfaceContainerLowest,
                 appBar: AppBar(
@@ -205,133 +171,54 @@ class ChatInboxView extends StatelessWidget {
                 ),
                 body: RefreshIndicator(
                   onRefresh: p.load,
-                  child: ListView.separated(
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-                    itemCount: p.conversations.length,
-                    separatorBuilder: (context, _) =>
-                        const SizedBox(height: 6),
-                    itemBuilder: (context, i) {
-                      final c = p.conversations[i];
-                      final peer = c.otherUsername ?? '';
-                      final title = (c.otherFullName ?? '').trim().isNotEmpty
-                          ? c.otherFullName!.trim()
-                          : peer;
-                      final subtitle = (c.lastMessage ?? '').trim().isNotEmpty
-                          ? c.lastMessage!.trim()
-                          : 'Sohbeti başlat';
-                      final time = c.lastMessageAt ?? '';
-                      final unread = c.unreadCount ?? 0;
-
-                      return Material(
-                        color: AppColors.surfaceContainer,
-                        borderRadius: BorderRadius.circular(16),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(16),
-                          onTap: () => _openConversation(context, c),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 10,
-                            ),
-                            child: Row(
-                              children: [
-                                CircleAvatar(
-                                  radius: 22,
-                                  backgroundColor:
-                                      AppColors.primaryContainer.withValues(
-                                    alpha: 0.35,
-                                  ),
-                                  child: Text(
-                                    title.isNotEmpty
-                                        ? title[0].toUpperCase()
-                                        : '?',
-                                    style: const TextStyle(
-                                      color: AppColors.onPrimary,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        title,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleSmall
-                                            ?.copyWith(
-                                              fontWeight: unread > 0
-                                                  ? FontWeight.w800
-                                                  : FontWeight.w700,
-                                            ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        subtitle,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall
-                                            ?.copyWith(
-                                              color: AppColors.onSurfaceHint,
-                                              fontWeight: unread > 0
-                                                  ? FontWeight.w700
-                                                  : FontWeight.w400,
-                                            ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text(
-                                      time,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .labelSmall
-                                          ?.copyWith(
-                                            color: AppColors.secondary,
-                                          ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    if (unread > 0)
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 4,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.primaryContainer,
-                                          borderRadius:
-                                              BorderRadius.circular(999),
-                                        ),
-                                        child: Text(
-                                          unread > 99 ? '99+' : '$unread',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .labelSmall
-                                              ?.copyWith(
-                                                color: AppColors.onPrimary,
-                                                fontWeight: FontWeight.w800,
-                                              ),
-                                        ),
-                                      )
-                                    else
-                                      const SizedBox(height: 20),
-                                  ],
-                                ),
-                              ],
-                            ),
+                    children: [
+                      if (p.error != null && p.conversations.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(8, 16, 8, 20),
+                          child: Column(
+                            children: [
+                              Text(
+                                p.error!,
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(color: AppColors.error),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Listeyi yenilemek için aşağı çekin veya üstteki yenile simgesine dokunun.',
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(color: AppColors.secondary),
+                              ),
+                            ],
                           ),
                         ),
-                      );
-                    },
+                      if (p.conversations.isEmpty &&
+                          p.error == null &&
+                          !p.loading)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(8, 32, 8, 16),
+                          child: Text(
+                            'Henüz sohbet yok. Sağ üstten yeni sohbet başlatabilirsiniz.',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(color: AppColors.secondary),
+                          ),
+                        ),
+                      for (var i = 0; i < p.conversations.length; i++) ...[
+                        if (i > 0) const SizedBox(height: 6),
+                        _conversationTile(context, p.conversations[i]),
+                      ],
+                    ],
                   ),
                 ),
               );
@@ -339,6 +226,126 @@ class ChatInboxView extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  Widget _conversationTile(
+    BuildContext context,
+    ConversationSummaryDto c,
+  ) {
+    final peer = c.otherUsername ?? '';
+    final title = (c.otherFullName ?? '').trim().isNotEmpty
+        ? c.otherFullName!.trim()
+        : peer;
+    final last = (c.lastMessage ?? '').trim();
+    final contentLine = (c.relatedContentLabel ?? '').trim();
+    final time = c.lastMessageAt ?? '';
+    final unread = c.unreadCount ?? 0;
+
+    return Material(
+      color: AppColors.surfaceContainer,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => _openConversation(context, c),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 10,
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: AppColors.primaryContainer.withValues(
+                  alpha: 0.35,
+                ),
+                child: Text(
+                  title.isNotEmpty ? title[0].toUpperCase() : '?',
+                  style: const TextStyle(
+                    color: AppColors.onPrimary,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: unread > 0
+                                ? FontWeight.w800
+                                : FontWeight.w700,
+                          ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (contentLine.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        'Gönderi: $contentLine',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: AppColors.tertiary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                    ],
+                    const SizedBox(height: 2),
+                    Text(
+                      last.isNotEmpty ? last : 'Henüz mesaj yok',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.onSurfaceHint,
+                            fontWeight: unread > 0
+                                ? FontWeight.w700
+                                : FontWeight.w400,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    time,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: AppColors.secondary,
+                        ),
+                  ),
+                  const SizedBox(height: 6),
+                  if (unread > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryContainer,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        unread > 99 ? '99+' : '$unread',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: AppColors.onPrimary,
+                              fontWeight: FontWeight.w800,
+                            ),
+                      ),
+                    )
+                  else
+                    const SizedBox(height: 20),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

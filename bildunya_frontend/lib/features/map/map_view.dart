@@ -133,6 +133,7 @@ class _MapViewState extends State<MapView> {
   _PinLayer _layer = _PinLayer.all;
   _MapPin? _selected;
   LatLng? _pendingPoint;
+  bool _awaitingPinPlacement = false;
 
   final Distance _distance = const Distance();
   final Map<String, List<String>> _pinImageCache = <String, List<String>>{};
@@ -444,7 +445,7 @@ class _MapViewState extends State<MapView> {
     final type = switch (pin) {
       _ContentPin() => 'İçerik pini',
       _PopularPin() => 'Popüler konum',
-      _CustomPin() => 'Kullanıcı pini',
+      _CustomPin() => 'Özel pin',
     };
     final t = pin.title.trim().isNotEmpty ? pin.title.trim() : 'Pin';
     return '$type: $t';
@@ -476,7 +477,7 @@ class _MapViewState extends State<MapView> {
     return pins.where((p) => _matchesQuery(p, q)).toList();
   }
 
-  Future<void> _onMapTap(LatLng point) async {
+  Future<void> _handleAddPinAt(LatLng point) async {
     final auth = context.read<AuthProvider>();
     if (!auth.isAuthenticated) {
       showAppSnackBar(
@@ -486,7 +487,10 @@ class _MapViewState extends State<MapView> {
       );
       return;
     }
-    setState(() => _pendingPoint = point);
+    setState(() {
+      _awaitingPinPlacement = false;
+      _pendingPoint = point;
+    });
 
     final kind = await showModalBottomSheet<_CreatePinKind>(
       context: context,
@@ -527,7 +531,9 @@ class _MapViewState extends State<MapView> {
 
     if (!mounted) return;
     if (kind == null) {
-      setState(() => _pendingPoint = null);
+      setState(() {
+        _pendingPoint = null;
+      });
       return;
     }
 
@@ -563,6 +569,36 @@ class _MapViewState extends State<MapView> {
           radiusKm: 40,
         );
       }
+    }
+  }
+
+  void _onMapTap(TapPosition tapPosition, LatLng point) {
+    if (!_awaitingPinPlacement) return;
+    unawaited(_handleAddPinAt(point));
+  }
+
+  void _onMapLongPress(TapPosition tapPosition, LatLng point) {
+    unawaited(_handleAddPinAt(point));
+  }
+
+  void _togglePinPlacementMode() {
+    final auth = context.read<AuthProvider>();
+    if (!auth.isAuthenticated) {
+      showAppSnackBar(
+        context,
+        'Konum eklemek için giriş yapın.',
+        isError: true,
+      );
+      return;
+    }
+    setState(() {
+      _awaitingPinPlacement = !_awaitingPinPlacement;
+    });
+    if (_awaitingPinPlacement) {
+      showAppSnackBar(
+        context,
+        'Haritada istediğiniz noktaya dokunun (veya uzun basın).',
+      );
     }
   }
 
@@ -608,17 +644,15 @@ class _MapViewState extends State<MapView> {
                   ],
                 ),
                 child: Icon(
-                  pin is _CustomPin
-                      ? Symbols.place
-                      : (pin is _PopularPin ? Symbols.star : Symbols.location_on),
+                  pin is _PopularPin || pin is _CustomPin
+                      ? Symbols.star
+                      : Symbols.location_on,
                   size: 26,
                   color: _selected?.key == pin.key
                       ? AppColors.onPrimary
-                      : (pin is _CustomPin
-                          ? AppColors.error
-                          : (pin is _PopularPin
-                              ? AppColors.tertiary
-                              : AppColors.primaryContainer)),
+                      : (pin is _PopularPin || pin is _CustomPin
+                          ? AppColors.tertiary
+                          : AppColors.primaryContainer),
                 ),
               ),
             ),
@@ -656,6 +690,16 @@ class _MapViewState extends State<MapView> {
 
     return Scaffold(
       backgroundColor: AppColors.surfaceContainerLowest,
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 100),
+        child: FloatingActionButton.extended(
+          onPressed: _togglePinPlacementMode,
+          icon: Icon(
+            _awaitingPinPlacement ? Symbols.close : Symbols.add_location_alt,
+          ),
+          label: Text(_awaitingPinPlacement ? 'İptal' : 'Pin ekle'),
+        ),
+      ),
       body: Stack(
         children: [
           Positioned.fill(
@@ -666,7 +710,8 @@ class _MapViewState extends State<MapView> {
                 initialZoom: 12,
                 minZoom: 3,
                 maxZoom: 18,
-                onTap: (tapPosition, point) => _onMapTap(point),
+                onTap: _onMapTap,
+                onLongPress: _onMapLongPress,
               ),
               children: [
                 TileLayer(
@@ -728,6 +773,40 @@ class _MapViewState extends State<MapView> {
                       ),
                     ),
                     const SizedBox(height: 12),
+                    if (_awaitingPinPlacement)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Material(
+                          color: AppColors.primaryContainer.withValues(alpha: 0.35),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Symbols.touch_app,
+                                  size: 18,
+                                  color: AppColors.onSurface,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Pin eklemek için haritada bir noktaya dokunun veya uzun basın.',
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: AppColors.onSurface,
+                                      fontWeight: FontWeight.w700,
+                                      height: 1.25,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
@@ -1061,7 +1140,9 @@ class _BottomPreviewCard extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
                       child: Text(
-                        p is _PopularPin ? 'Sistem konumu' : 'Kullanıcı konumu',
+                        p is _PopularPin
+                            ? 'Sistem konumu'
+                            : (p is _CustomPin ? 'Özel pin' : 'Kullanıcı konumu'),
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: AppColors.secondary.withValues(alpha: 0.85),
                           fontWeight: FontWeight.w700,
@@ -1324,7 +1405,7 @@ class _CustomPinPreviewCardState extends State<_CustomPinPreviewCard> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Kullanıcı konumu',
+                        'Özel pin',
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: AppColors.secondary.withValues(alpha: 0.85),
                           fontWeight: FontWeight.w700,

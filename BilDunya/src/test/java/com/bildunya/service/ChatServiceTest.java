@@ -7,6 +7,7 @@ import com.bildunya.entity.ChatMessage;
 import com.bildunya.entity.User;
 import com.bildunya.repository.ChatConversationRepository;
 import com.bildunya.repository.ChatMessageRepository;
+import com.bildunya.repository.ContentRepository;
 import com.bildunya.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -33,12 +34,14 @@ class ChatServiceTest {
         ChatMessageRepository chatMessageRepository = mock(ChatMessageRepository.class);
         ChatConversationRepository chatConversationRepository = mock(ChatConversationRepository.class);
         UserRepository userRepository = mock(UserRepository.class);
+        ContentRepository contentRepository = mock(ContentRepository.class);
         SimpMessagingTemplate messagingTemplate = mock(SimpMessagingTemplate.class);
 
         ChatService service = new ChatService(
                 chatMessageRepository,
                 chatConversationRepository,
                 userRepository,
+                contentRepository,
                 messagingTemplate
         );
 
@@ -89,12 +92,14 @@ class ChatServiceTest {
         ChatMessageRepository chatMessageRepository = mock(ChatMessageRepository.class);
         ChatConversationRepository chatConversationRepository = mock(ChatConversationRepository.class);
         UserRepository userRepository = mock(UserRepository.class);
+        ContentRepository contentRepository = mock(ContentRepository.class);
         SimpMessagingTemplate messagingTemplate = mock(SimpMessagingTemplate.class);
 
         ChatService service = new ChatService(
                 chatMessageRepository,
                 chatConversationRepository,
                 userRepository,
+                contentRepository,
                 messagingTemplate
         );
 
@@ -126,12 +131,14 @@ class ChatServiceTest {
         ChatMessageRepository chatMessageRepository = mock(ChatMessageRepository.class);
         ChatConversationRepository chatConversationRepository = mock(ChatConversationRepository.class);
         UserRepository userRepository = mock(UserRepository.class);
+        ContentRepository contentRepository = mock(ContentRepository.class);
         SimpMessagingTemplate messagingTemplate = mock(SimpMessagingTemplate.class);
 
         ChatService service = new ChatService(
                 chatMessageRepository,
                 chatConversationRepository,
                 userRepository,
+                contentRepository,
                 messagingTemplate
         );
 
@@ -162,12 +169,14 @@ class ChatServiceTest {
         ChatMessageRepository chatMessageRepository = mock(ChatMessageRepository.class);
         ChatConversationRepository chatConversationRepository = mock(ChatConversationRepository.class);
         UserRepository userRepository = mock(UserRepository.class);
+        ContentRepository contentRepository = mock(ContentRepository.class);
         SimpMessagingTemplate messagingTemplate = mock(SimpMessagingTemplate.class);
 
         ChatService service = new ChatService(
                 chatMessageRepository,
                 chatConversationRepository,
                 userRepository,
+                contentRepository,
                 messagingTemplate
         );
 
@@ -212,6 +221,16 @@ class ChatServiceTest {
                     public Number getUnreadCount() {
                         return BigInteger.valueOf(3);
                     }
+
+                    @Override
+                    public Number getRelatedContentId() {
+                        return BigInteger.valueOf(500);
+                    }
+
+                    @Override
+                    public String getRelatedContentLabel() {
+                        return "Kapadokya";
+                    }
                 };
 
         PageRequest pageable = PageRequest.of(0, 50);
@@ -229,6 +248,8 @@ class ChatServiceTest {
         assertEquals("hi", dto.getLastMessage());
         assertEquals("2026-05-04T12:30:15", dto.getLastMessageAt());
         assertEquals(3L, dto.getUnreadCount());
+        assertEquals(500L, dto.getRelatedContentId());
+        assertEquals("Kapadokya", dto.getRelatedContentLabel());
 
         verifyNoInteractions(messagingTemplate);
     }

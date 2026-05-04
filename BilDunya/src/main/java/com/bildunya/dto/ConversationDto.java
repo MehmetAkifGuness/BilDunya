@@ -31,5 +31,11 @@ public class ConversationDto {
 
     @JsonProperty("created_at")
     private String createdAt;
+
+    @JsonProperty("related_content_id")
+    private Long relatedContentId;
+
+    @JsonProperty("related_content_label")
+    private String relatedContentLabel;
 }
 

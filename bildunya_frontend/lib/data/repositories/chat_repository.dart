@@ -30,15 +30,22 @@ class ChatRepository {
     }
   }
 
-  Future<ConversationDto> openConversation(String otherUsername) async {
+  Future<ConversationDto> openConversation(
+    String otherUsername, {
+    int? relatedContentId,
+  }) async {
     try {
+      final payload = <String, dynamic>{
+        'otherUsername': otherUsername,
+        'relatedContentId': ?relatedContentId,
+      };
       final res = await _dio.post<Map<String, dynamic>>(
         '/conversations',
-        data: {'otherUsername': otherUsername},
+        data: payload,
       );
-      final body = res.data;
-      if (body == null) throw Exception('Boş yanıt');
-      return ConversationDto.fromJson(body);
+      final resBody = res.data;
+      if (resBody == null) throw Exception('Boş yanıt');
+      return ConversationDto.fromJson(resBody);
     } on DioException catch (e) {
       throw Exception(dioErrorMessage(e));
     }

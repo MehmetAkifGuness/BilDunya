@@ -18,6 +18,7 @@ class ChatProvider extends ChangeNotifier {
     int? conversationId,
     required this.peerUsername,
     required this.peerDisplayName,
+    this.relatedContentLabel,
   })  : _repository = repository,
         _conversationId = conversationId;
 
@@ -27,12 +28,16 @@ class ChatProvider extends ChangeNotifier {
   final String peerUsername;
   final String peerDisplayName;
 
+  /// Mekan detayından açıldıysa, ilişkili gönderi başlığı / özeti.
+  final String? relatedContentLabel;
+
   final List<ChatMessageDto> messages = [];
   bool loading = false;
   bool sending = false;
   String? error;
   StompClient? _stomp;
   StompUnsubscribe? _unsub;
+  bool _historyLoadRetrying = false;
 
   int? get conversationId => _conversationId;
 
@@ -82,6 +87,15 @@ class ChatProvider extends ChangeNotifier {
         } catch (_) {}
       }
     } catch (e) {
+      if (!_historyLoadRetrying) {
+        _historyLoadRetrying = true;
+        loading = false;
+        notifyListeners();
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+        await loadHistory();
+        _historyLoadRetrying = false;
+        return;
+      }
       error = userFriendlyErrorMessage(e);
     } finally {
       loading = false;

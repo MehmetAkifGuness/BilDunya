@@ -48,7 +48,7 @@ public class ConversationController {
             @Valid @RequestBody CreateConversationRequest request) {
 
         UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
-        ConversationDto dto = chatService.openConversation(principal.getUsername(), request.getOtherUsername());
+        ConversationDto dto = chatService.openConversation(principal.getUsername(), request);
         return ResponseEntity.ok(dto);
     }
 

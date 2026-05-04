@@ -17,16 +17,29 @@ class ChatInboxProvider extends ChangeNotifier {
     loading = true;
     error = null;
     notifyListeners();
-    try {
-      final page = await _repository.getMyConversations(size: 100);
-      conversations
-        ..clear()
-        ..addAll(page.content);
-    } catch (e) {
-      error = userFriendlyErrorMessage(e);
-    } finally {
-      loading = false;
-      notifyListeners();
+    const maxAttempts = 3;
+    Object? lastFailure;
+    for (var attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        final page = await _repository.getMyConversations(size: 100);
+        conversations
+          ..clear()
+          ..addAll(page.content);
+        lastFailure = null;
+        break;
+      } catch (e) {
+        lastFailure = e;
+        if (attempt < maxAttempts - 1) {
+          await Future<void>.delayed(
+            Duration(milliseconds: 350 * (attempt + 1)),
+          );
+        }
+      }
     }
+    if (lastFailure != null) {
+      error = userFriendlyErrorMessage(lastFailure);
+    }
+    loading = false;
+    notifyListeners();
   }
 }

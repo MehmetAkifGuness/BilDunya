@@ -3,15 +3,18 @@ package com.bildunya.service;
 import com.bildunya.dto.ChatMessageDto;
 import com.bildunya.dto.ConversationDto;
 import com.bildunya.dto.ConversationSummaryDto;
+import com.bildunya.dto.CreateConversationRequest;
 import com.bildunya.dto.SendChatMessageRequest;
 import com.bildunya.dto.SendMessageRequest;
 import com.bildunya.entity.ChatConversation;
 import com.bildunya.entity.ChatMessage;
+import com.bildunya.entity.Content;
 import com.bildunya.entity.User;
 import com.bildunya.exception.ResourceNotFoundException;
 import com.bildunya.exception.UnauthorizedException;
 import com.bildunya.repository.ChatConversationRepository;
 import com.bildunya.repository.ChatMessageRepository;
+import com.bildunya.repository.ContentRepository;
 import com.bildunya.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -34,6 +37,7 @@ public class ChatService {
     private final ChatMessageRepository chatMessageRepository;
     private final ChatConversationRepository chatConversationRepository;
     private final UserRepository userRepository;
+    private final ContentRepository contentRepository;
     private final SimpMessagingTemplate messagingTemplate;
 
     public ChatMessageDto sendMessage(String senderUsername, SendChatMessageRequest request) {
@@ -102,10 +106,13 @@ public class ChatService {
                         .lastMessage(p.getLastMessageText())
                         .lastMessageAt(formatTemporalOrNull(p.getLastMessageCreatedAt(), formatter))
                         .unreadCount(toLongOrDefault(p.getUnreadCount(), 0L))
+                        .relatedContentId(toLongOrNull(p.getRelatedContentId()))
+                        .relatedContentLabel(trimToNull(p.getRelatedContentLabel()))
                         .build());
     }
 
-    public ConversationDto openConversation(String username, String otherUsername) {
+    public ConversationDto openConversation(String username, CreateConversationRequest request) {
+        String otherUsername = request.getOtherUsername();
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
@@ -113,9 +120,22 @@ public class ChatService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         ChatConversation conversation = getOrCreateConversation(user, other);
+
+        Long relatedContentId = request.getRelatedContentId();
+        if (relatedContentId != null && relatedContentId > 0) {
+            contentRepository.findById(relatedContentId)
+                    .filter(c -> !Boolean.TRUE.equals(c.getIsDeleted()))
+                    .ifPresent(ignored -> {
+                        conversation.setRelatedContentId(relatedContentId);
+                        chatConversationRepository.save(conversation);
+                    });
+        }
+
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
         User otherSide = resolveOtherSide(conversation, user);
+        Long rcId = conversation.getRelatedContentId();
+        String rcLabel = resolveRelatedContentLabel(rcId);
         return ConversationDto.builder()
                 .id(conversation.getId())
                 .user1Id(conversation.getUser1() != null ? conversation.getUser1().getId() : null)
@@ -124,6 +144,8 @@ public class ChatService {
                 .otherUsername(otherSide != null ? otherSide.getUsername() : null)
                 .otherFullName(otherSide != null ? otherSide.getFullName() : null)
                 .createdAt(formatOrNull(conversation.getCreatedAt(), formatter))
+                .relatedContentId(rcId)
+                .relatedContentLabel(rcLabel)
                 .build();
     }
 
@@ -264,6 +286,39 @@ public class ChatService {
 
     private static Long toLongOrDefault(Number value, long defaultValue) {
         return value != null ? value.longValue() : defaultValue;
+    }
+
+    private String resolveRelatedContentLabel(Long contentId) {
+        if (contentId == null || contentId <= 0) {
+            return null;
+        }
+        return contentRepository.findById(contentId)
+                .filter(c -> !Boolean.TRUE.equals(c.getIsDeleted()))
+                .map(ChatService::buildRelatedContentLabel)
+                .orElse(null);
+    }
+
+    private static String buildRelatedContentLabel(Content c) {
+        String loc = c.getLocationName();
+        if (loc != null && !loc.isBlank()) {
+            return loc.trim();
+        }
+        if (c.getDescription() == null) {
+            return null;
+        }
+        String d = c.getDescription().trim();
+        if (d.isEmpty()) {
+            return null;
+        }
+        return d.length() > 100 ? d.substring(0, 100) : d;
+    }
+
+    private static String trimToNull(String s) {
+        if (s == null) {
+            return null;
+        }
+        String t = s.trim();
+        return t.isEmpty() ? null : t;
     }
 
     private ChatMessageDto mapToDto(ChatMessage message) {

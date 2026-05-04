@@ -68,6 +68,14 @@ class _ContentDetailViewState extends State<ContentDetailView> {
     }
   }
 
+  String? _contentChatContextLabel(ContentDto c) {
+    final loc = (c.locationName ?? '').trim();
+    if (loc.isNotEmpty) return loc;
+    final d = (c.description ?? '').trim();
+    if (d.isEmpty) return null;
+    return d.length > 80 ? '${d.substring(0, 80)}…' : d;
+  }
+
   void _openComments(ContentDto c) {
     final auth = context.read<AuthProvider>();
     if (!auth.isAuthenticated) {
@@ -108,9 +116,15 @@ class _ContentDetailViewState extends State<ContentDetailView> {
     }
     final name = c.user?.displayName ?? peer;
 
+    final contentId = c.id;
+    final relatedLabel = _contentChatContextLabel(c);
+
     int? convId;
     try {
-      final conv = await context.read<ChatRepository>().openConversation(peer);
+      final conv = await context.read<ChatRepository>().openConversation(
+            peer,
+            relatedContentId: contentId,
+          );
       convId = conv.id;
     } catch (_) {
       // Fallback: some server versions may not support `/conversations`.
@@ -127,6 +141,7 @@ class _ContentDetailViewState extends State<ContentDetailView> {
             conversationId: convId,
             peerUsername: peer,
             peerDisplayName: name,
+            relatedContentLabel: relatedLabel,
           )..init(),
           child: const ChatView(),
         ),

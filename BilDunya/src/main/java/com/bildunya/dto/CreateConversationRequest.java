@@ -14,5 +14,8 @@ public class CreateConversationRequest {
 
     @NotBlank(message = "Other username is required")
     private String otherUsername;
+
+    /** İsteğe bağlı: sohbetin bağlandığı içerik (gönderi) kimliği. */
+    private Long relatedContentId;
 }
 

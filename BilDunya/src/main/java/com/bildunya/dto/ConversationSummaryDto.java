@@ -31,5 +31,11 @@ public class ConversationSummaryDto {
 
     @JsonProperty("unread_count")
     private Long unreadCount;
+
+    @JsonProperty("related_content_id")
+    private Long relatedContentId;
+
+    @JsonProperty("related_content_label")
+    private String relatedContentLabel;
 }
 

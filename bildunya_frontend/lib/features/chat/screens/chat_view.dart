@@ -175,22 +175,12 @@ class _ChatViewState extends State<ChatView> {
             body: Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      p.error!,
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: AppColors.error,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    FilledButton(
-                      onPressed: p.loadHistory,
-                      child: const Text('Yeniden dene'),
-                    ),
-                  ],
+                child: Text(
+                  p.error!,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: AppColors.error,
+                  ),
                 ),
               ),
             ),
@@ -231,6 +221,18 @@ class _ChatViewState extends State<ChatView> {
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
+                      if ((p.relatedContentLabel ?? '').trim().isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          'Gönderi: ${p.relatedContentLabel!.trim()}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: AppColors.tertiary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
                       Row(
                         children: [
                           Container(

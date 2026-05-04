@@ -8,6 +8,8 @@ class ConversationSummaryDto {
     this.lastMessage,
     this.lastMessageAt,
     this.unreadCount,
+    this.relatedContentId,
+    this.relatedContentLabel,
   });
 
   final int? id;
@@ -17,6 +19,8 @@ class ConversationSummaryDto {
   final String? lastMessage;
   final String? lastMessageAt;
   final int? unreadCount;
+  final int? relatedContentId;
+  final String? relatedContentLabel;
 
   factory ConversationSummaryDto.fromJson(Map<String, dynamic> json) {
     return ConversationSummaryDto(
@@ -33,6 +37,10 @@ class ConversationSummaryDto {
           json['lastMessageAt'] as String?,
       unreadCount: (json['unread_count'] as num?)?.toInt() ??
           (json['unreadCount'] as num?)?.toInt(),
+      relatedContentId: (json['related_content_id'] as num?)?.toInt() ??
+          (json['relatedContentId'] as num?)?.toInt(),
+      relatedContentLabel: json['related_content_label'] as String? ??
+          json['relatedContentLabel'] as String?,
     );
   }
 }

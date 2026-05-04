@@ -28,5 +28,11 @@ public class ChatConversation extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user2_id", nullable = false)
     private User user2;
+
+    /**
+     * Son / aktif bağlam: kullanıcı bu sohbeti hangi içerik (gönderi) üzerinden açtı.
+     */
+    @Column(name = "related_content_id")
+    private Long relatedContentId;
 }
 
