@@ -4,9 +4,11 @@ import com.bildunya.dto.ContentDto;
 import com.bildunya.dto.CreateContentRequest;
 import com.bildunya.dto.ModerateContentRequest;
 import com.bildunya.entity.Content;
+import com.bildunya.entity.ContentLike;
 import com.bildunya.entity.User;
 import com.bildunya.exception.ResourceNotFoundException;
 import com.bildunya.exception.UnauthorizedException;
+import com.bildunya.repository.ContentLikeRepository;
 import com.bildunya.repository.ContentRepository;
 import com.bildunya.repository.UserRepository;
 import com.drew.imaging.ImageMetadataReader;
@@ -54,7 +56,7 @@ public class ContentService {
             Set.of(VERIFICATION_PENDING, VERIFICATION_APPROVED, VERIFICATION_REJECTED);
     private static final Set<String> ALLOWED_MODERATION_DECISIONS =
             Set.of(VERIFICATION_APPROVED, VERIFICATION_REJECTED);
-    private static final Set<String> MODERATOR_ROLES = Set.of("ADMIN", "MODERATOR");
+    private static final Set<String> MODERATOR_ROLES = Set.of("ADMIN");
 
     private static final int MAX_DESCRIPTION_LENGTH = 2000;
     private static final int MAX_LOCATION_NAME_LENGTH = 200;
@@ -62,6 +64,7 @@ public class ContentService {
     private static final int MAX_PREF_KEYWORDS = 8;
 
     private final ContentRepository contentRepository;
+    private final ContentLikeRepository contentLikeRepository;
     private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
     private final ObjectMapper objectMapper;
@@ -90,7 +93,7 @@ public class ContentService {
         content.setIsDeleted(false);
 
         content = contentRepository.save(content);
-        return mapToContentDto(content);
+        return mapToContentDto(content, username);
     }
 
     @CacheEvict(value = {"verifiedContent", "recommendedContent", "nearbyContent"}, allEntries = true)
@@ -126,17 +129,21 @@ public class ContentService {
         content.setFileUrl(fileUrl);
 
         content = contentRepository.save(content);
-        return mapToContentDto(content);
+        return mapToContentDto(content, username);
     }
 
     public ContentDto getContentById(Long id) {
+        return getContentById(id, null);
+    }
+
+    public ContentDto getContentById(Long id, String currentUsername) {
         Content content = contentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Content not found"));
 
         content.setViewCount(content.getViewCount() + 1);
         contentRepository.save(content);
 
-        return mapToContentDto(content);
+        return mapToContentDto(content, currentUsername);
     }
 
     @CacheEvict(value = {"verifiedContent", "recommendedContent", "nearbyContent"}, allEntries = true)
@@ -159,13 +166,22 @@ public class ContentService {
         content.setFileUrl(fileUrl);
 
         content = contentRepository.save(content);
-        return mapToContentDto(content);
+        return mapToContentDto(content, username);
     }
 
     @Cacheable(
             value = "nearbyContent",
             key = "'n:' + #latitude + ':' + #longitude + ':' + #radiusKm + ':' + #pageable.pageNumber + ':' + #pageable.pageSize + ':' + #pageable.sort.toString()")
     public Page<ContentDto> getNearbyContent(Double latitude, Double longitude, Double radiusKm, Pageable pageable) {
+        return getNearbyContent(latitude, longitude, radiusKm, pageable, null);
+    }
+
+    public Page<ContentDto> getNearbyContent(
+            Double latitude,
+            Double longitude,
+            Double radiusKm,
+            Pageable pageable,
+            String currentUsername) {
         if (latitude == null || longitude == null || radiusKm == null) {
             throw new IllegalArgumentException("Latitude, longitude and radiusKm are required");
         }
@@ -184,15 +200,19 @@ public class ContentService {
                         box.maxLon(),
                         box.wrapsLon(),
                         pageable)
-                .map(this::mapToContentDto);
+                .map(content -> mapToContentDto(content, currentUsername));
     }
 
     @Cacheable(
             value = "verifiedContent",
             key = "'v:' + #pageable.pageNumber + ':' + #pageable.pageSize + ':' + #pageable.sort.toString()")
     public Page<ContentDto> getVerifiedContent(Pageable pageable) {
+        return getVerifiedContent(pageable, null);
+    }
+
+    public Page<ContentDto> getVerifiedContent(Pageable pageable, String currentUsername) {
         return contentRepository.findApprovedContent(pageable)
-                .map(this::mapToContentDto);
+                .map(content -> mapToContentDto(content, currentUsername));
     }
 
     @Transactional(readOnly = true)
@@ -211,7 +231,7 @@ public class ContentService {
         if (keywords.isEmpty()) {
             return contentRepository
                     .findByIsDeletedFalseAndVerificationStatus(VERIFICATION_APPROVED, pageable)
-                    .map(this::mapToContentDto);
+                    .map(content -> mapToContentDto(content, username));
         }
 
         Sort sort = pageable.getSort().isSorted()
@@ -240,7 +260,7 @@ public class ContentService {
                 ? source.getContent().stream().map(content -> new ScoredContent(content, 0)).toList()
                 : scored;
         for (ScoredContent item : scoredSource) {
-            mapped.add(mapToContentDto(item.content()));
+            mapped.add(mapToContentDto(item.content(), username));
             if (mapped.size() >= pageable.getPageSize()) {
                 break;
             }
@@ -308,7 +328,7 @@ public class ContentService {
         }
 
         content = contentRepository.save(content);
-        return mapToContentDto(content);
+        return mapToContentDto(content, requesterUsername);
     }
 
     public Page<ContentDto> getUserContent(Long userId, Pageable pageable) {
@@ -317,6 +337,34 @@ public class ContentService {
 
         return contentRepository.findByUser(user, pageable)
                 .map(this::mapToContentDto);
+    }
+
+    @CacheEvict(value = {"verifiedContent", "recommendedContent", "nearbyContent"}, allEntries = true)
+    public ContentDto toggleLike(Long contentId, String username) {
+        if (username == null || username.isBlank()) {
+            throw new UnauthorizedException("Authentication required");
+        }
+
+        Content content = contentRepository.findById(contentId)
+                .filter(c -> !Boolean.TRUE.equals(c.getIsDeleted()))
+                .orElseThrow(() -> new ResourceNotFoundException("Content not found"));
+        User user = userRepository.findByUsernameIgnoreCase(username.trim())
+                .filter(u -> !Boolean.TRUE.equals(u.getIsDeleted()) && Boolean.TRUE.equals(u.getIsActive()))
+                .orElseThrow(() -> new UnauthorizedException("Authentication required"));
+
+        contentLikeRepository.findByContent_IdAndUser_IdAndIsDeletedFalse(content.getId(), user.getId())
+                .ifPresentOrElse(
+                        contentLikeRepository::delete,
+                        () -> {
+                            ContentLike like = ContentLike.builder()
+                                    .content(content)
+                                    .user(user)
+                                    .build();
+                            like.setIsDeleted(false);
+                            contentLikeRepository.save(like);
+                        });
+
+        return mapToContentDto(content, user.getUsername());
     }
 
     @CacheEvict(value = {"verifiedContent", "recommendedContent", "nearbyContent"}, allEntries = true)
@@ -343,7 +391,19 @@ public class ContentService {
     }
 
     private ContentDto mapToContentDto(Content content) {
+        return mapToContentDto(content, null);
+    }
+
+    private ContentDto mapToContentDto(Content content, String currentUsername) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+        Long contentId = content.getId();
+        long likeCount = contentId == null ? 0L : contentLikeRepository.countByContent_IdAndIsDeletedFalse(contentId);
+        boolean likedByCurrentUser = contentId != null
+                && currentUsername != null
+                && !currentUsername.isBlank()
+                && contentLikeRepository.existsByContent_IdAndUser_UsernameIgnoreCaseAndIsDeletedFalse(
+                contentId,
+                currentUsername.trim());
 
         return ContentDto.builder()
                 .id(content.getId())
@@ -358,6 +418,8 @@ public class ContentService {
                 .rejectionReason(content.getRejectionReason())
                 .exifData(content.getExifData())
                 .viewCount(content.getViewCount())
+                .likeCount(likeCount)
+                .likedByCurrentUser(likedByCurrentUser)
                 .shareType(content.getShareType())
                 .tags(content.getTags())
                 .user(mapAuthorForContent(content, formatter))
@@ -736,21 +798,6 @@ public class ContentService {
         content.setIsVerified(false);
         content.setVerificationStatus(VERIFICATION_PENDING);
         content.setRejectionReason(null);
-
-        if (exifMatch == null || !exifMatch.exifGpsFound()) {
-            return;
-        }
-
-        if (exifMatch.locationMatch()) {
-            content.setIsVerified(true);
-            content.setVerificationStatus(VERIFICATION_APPROVED);
-            content.setRejectionReason(null);
-            return;
-        }
-
-        content.setIsVerified(false);
-        content.setVerificationStatus(VERIFICATION_REJECTED);
-        content.setRejectionReason(REJECTION_EXIF_LOCATION_MISMATCH);
     }
 
     private static double haversineKm(double lat1, double lon1, Double lat2, Double lon2) {
@@ -788,6 +835,10 @@ public class ContentService {
         if (role == null || role.isBlank()) {
             return false;
         }
-        return MODERATOR_ROLES.contains(role.trim().toUpperCase(Locale.ROOT));
+        String normalizedRole = role.trim().toUpperCase(Locale.ROOT);
+        if (normalizedRole.startsWith("ROLE_")) {
+            normalizedRole = normalizedRole.substring("ROLE_".length());
+        }
+        return MODERATOR_ROLES.contains(normalizedRole);
     }
 }

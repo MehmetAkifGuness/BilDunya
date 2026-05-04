@@ -121,9 +121,9 @@ class _ContentDetailViewState extends State<ContentDetailView> {
     int? convId;
     try {
       final conv = await context.read<ChatRepository>().openConversation(
-            peer,
-            relatedContentId: contentId,
-          );
+        peer,
+        relatedContentId: contentId,
+      );
       convId = conv.id;
     } catch (_) {
       // Fallback: some server versions may not support `/conversations`.
@@ -165,6 +165,15 @@ class _ContentDetailViewState extends State<ContentDetailView> {
     }
   }
 
+  Future<void> _toggleLike(ContentDto c) async {
+    final result = await context.read<ContentsProvider>().toggleLike(c);
+    if (!mounted) return;
+    setState(() => _content = result.content);
+    if (result.error != null) {
+      showAppSnackBar(context, result.error!, isError: true);
+    }
+  }
+
   String _mapRejectionReason(String? rawReason) {
     final reason = (rawReason ?? '').trim().toUpperCase();
     if (reason == 'EXIF_LOCATION_MISMATCH') {
@@ -177,6 +186,8 @@ class _ContentDetailViewState extends State<ContentDetailView> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final c = _content;
+    final likeLoading = context.watch<ContentsProvider>().isLikeLoading(c?.id);
+    final liked = c?.isLikedByCurrentUser ?? false;
 
     return Scaffold(
       backgroundColor: AppColors.surfaceContainerLowest,
@@ -355,7 +366,7 @@ class _ContentDetailViewState extends State<ContentDetailView> {
                           ),
                           if (c.isVerified == true)
                             Chip(
-                              label: const Text('Doğrulanmış'),
+                              label: const Text('Onaylı'),
                               backgroundColor: AppColors.primaryContainer
                                   .withValues(alpha: 0.2),
                               labelStyle: theme.textTheme.labelSmall?.copyWith(
@@ -369,7 +380,7 @@ class _ContentDetailViewState extends State<ContentDetailView> {
                                       .toUpperCase() ==
                                   'PENDING')
                             Chip(
-                              label: const Text('Doğrulama bekliyor'),
+                              label: const Text('Beklemede'),
                               backgroundColor: AppColors.surfaceContainerHigh,
                               labelStyle: theme.textTheme.labelSmall?.copyWith(
                                 color: AppColors.secondary,
@@ -383,7 +394,7 @@ class _ContentDetailViewState extends State<ContentDetailView> {
                             Tooltip(
                               message: _mapRejectionReason(c.rejectionReason),
                               child: Chip(
-                                label: const Text('Doğrulama hatalı'),
+                                label: const Text('Reddedildi'),
                                 backgroundColor: AppColors.error.withValues(
                                   alpha: 0.18,
                                 ),
@@ -398,6 +409,42 @@ class _ContentDetailViewState extends State<ContentDetailView> {
                       ),
                     ),
                     const SizedBox(height: 20),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Row(
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: c.id == null || likeLoading
+                                ? null
+                                : () => _toggleLike(c),
+                            icon: likeLoading
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Icon(
+                                    Symbols.favorite,
+                                    fill: liked ? 1.0 : 0.0,
+                                    color: liked
+                                        ? AppColors.error
+                                        : AppColors.secondary,
+                                  ),
+                            label: Text('${c.safeLikeCount}'),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            '${c.viewCount ?? 0} görüntülenme',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: AppColors.secondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: Row(

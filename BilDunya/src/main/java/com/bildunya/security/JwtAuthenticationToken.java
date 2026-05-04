@@ -34,6 +34,9 @@ public class JwtAuthenticationToken extends AbstractAuthenticationToken {
             return Collections.emptyList();
         }
         String role = principal.getRole().trim().toUpperCase(Locale.ROOT);
+        if (role.startsWith("ROLE_")) {
+            role = role.substring("ROLE_".length());
+        }
         return List.of(new SimpleGrantedAuthority("ROLE_" + role));
     }
 }

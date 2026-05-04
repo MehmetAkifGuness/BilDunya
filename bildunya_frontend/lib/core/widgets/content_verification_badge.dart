@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import '../theme/app_radii.dart';
 
 class ContentVerificationBadge extends StatelessWidget {
   const ContentVerificationBadge({
@@ -26,7 +27,7 @@ class ContentVerificationBadge extends StatelessWidget {
 
     if (verified) {
       return _BadgePill(
-        label: compact ? 'Onay' : 'Doğrulandı',
+        label: 'Onaylı',
         textColor: AppColors.primaryContainer,
         backgroundColor: AppColors.primaryContainer.withValues(alpha: 0.2),
       );
@@ -36,7 +37,7 @@ class ContentVerificationBadge extends StatelessWidget {
       return Tooltip(
         message: _mapRejectionReason(rejectionReason),
         child: _BadgePill(
-          label: compact ? 'Hatalı' : 'Doğrulama hatalı',
+          label: 'Reddedildi',
           textColor: AppColors.error,
           backgroundColor: AppColors.error.withValues(alpha: 0.18),
         ),
@@ -45,7 +46,7 @@ class ContentVerificationBadge extends StatelessWidget {
 
     if (normalizedStatus == 'PENDING') {
       return _BadgePill(
-        label: compact ? 'Beklemede' : 'Doğrulama bekliyor',
+        label: 'Beklemede',
         textColor: AppColors.secondary,
         backgroundColor: AppColors.surfaceContainerHigh,
       );
@@ -83,7 +84,7 @@ class _BadgePill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: backgroundColor,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(AppRadii.full),
       ),
       child: Text(
         label,

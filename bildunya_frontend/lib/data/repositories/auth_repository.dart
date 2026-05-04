@@ -57,11 +57,28 @@ class AuthRepository {
       );
     }
     if (auth.user != null) {
-      await _storage.write(
-        key: SecureKeys.userJson,
-        value: jsonEncode(auth.user!.toJson()),
-      );
+      await _persistUser(auth.user!);
     }
+  }
+
+  Future<UserDto> fetchCurrentUser() async {
+    try {
+      final res = await _dio.get<Map<String, dynamic>>('/users/me');
+      final body = res.data;
+      if (body == null) throw Exception('Boş yanıt');
+      final user = UserDto.fromJson(body);
+      await _persistUser(user);
+      return user;
+    } on DioException catch (e) {
+      throw Exception(dioErrorMessage(e));
+    }
+  }
+
+  Future<void> _persistUser(UserDto user) async {
+    await _storage.write(
+      key: SecureKeys.userJson,
+      value: jsonEncode(user.toJson()),
+    );
   }
 
   Future<void> logoutFromServer() async {

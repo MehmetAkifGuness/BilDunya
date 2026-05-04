@@ -73,4 +73,17 @@ class UserDto {
     }
     return 'Gezgin';
   }
+
+  String get normalizedRole {
+    var value = (role ?? 'USER').trim().toUpperCase();
+    if (value.startsWith('ROLE_')) {
+      value = value.substring('ROLE_'.length);
+    }
+    if (value == 'ADMIN' || value == 'MODERATOR' || value == 'USER') {
+      return value;
+    }
+    return 'USER';
+  }
+
+  bool get isAdmin => normalizedRole == 'ADMIN';
 }

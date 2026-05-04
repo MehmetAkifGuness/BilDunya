@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -78,10 +79,24 @@ public class UserService {
                 .isAnonymous(user.getIsAnonymous())
                 .isActive(user.getIsActive())
                 .emailVerified(user.getEmailVerified())
-                .role(user.getRole())
+                .role(normalizeRole(user.getRole()))
                 .phoneNumber(user.getPhoneNumber())
                 .locationPreferences(user.getLocationPreferences())
                 .createdAt(user.getCreatedAt() != null ? user.getCreatedAt().format(formatter) : null)
                 .build();
+    }
+
+    private static String normalizeRole(String role) {
+        if (role == null || role.isBlank()) {
+            return "USER";
+        }
+        String normalized = role.trim().toUpperCase(Locale.ROOT);
+        if (normalized.startsWith("ROLE_")) {
+            normalized = normalized.substring("ROLE_".length());
+        }
+        return switch (normalized) {
+            case "ADMIN", "MODERATOR", "USER" -> normalized;
+            default -> "USER";
+        };
     }
 }

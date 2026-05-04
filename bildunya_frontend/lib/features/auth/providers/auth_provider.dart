@@ -20,6 +20,7 @@ class AuthProvider extends ChangeNotifier {
   bool get isAuthenticated => _hasToken;
   bool get sessionRestored => _sessionRestored;
   bool get busy => _busy;
+  bool get isAdmin => _user?.isAdmin ?? false;
 
   Future<void> restoreSession() async {
     _busy = true;
@@ -29,6 +30,11 @@ class AuthProvider extends ChangeNotifier {
       _hasToken = token != null && token.isNotEmpty;
       if (_hasToken) {
         _user = await _repository.readCachedUser();
+        try {
+          _user = await _repository.fetchCurrentUser();
+        } catch (_) {
+          // Ağ/oturum yenileme sorunu varsa cache ile devam edilir.
+        }
       }
     } finally {
       _sessionRestored = true;
@@ -43,6 +49,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       final auth = await _repository.login(request);
       _applyAuth(auth);
+      await refreshCurrentUser();
       return null;
     } catch (e) {
       return e.toString();
@@ -58,6 +65,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       final auth = await _repository.register(request);
       _applyAuth(auth);
+      await refreshCurrentUser();
       return null;
     } catch (e) {
       return e.toString();
@@ -70,6 +78,17 @@ class AuthProvider extends ChangeNotifier {
   void _applyAuth(AuthResponse auth) {
     _hasToken = auth.accessToken.isNotEmpty;
     _user = auth.user;
+  }
+
+  Future<String?> refreshCurrentUser() async {
+    if (!_hasToken) return null;
+    try {
+      _user = await _repository.fetchCurrentUser();
+      notifyListeners();
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
   }
 
   Future<void> logout() async {

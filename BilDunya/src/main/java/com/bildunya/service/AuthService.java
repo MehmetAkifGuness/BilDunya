@@ -405,6 +405,9 @@ public class AuthService {
             return ROLE_USER;
         }
         String normalized = role.trim().toUpperCase(Locale.ROOT);
+        if (normalized.startsWith("ROLE_")) {
+            normalized = normalized.substring("ROLE_".length());
+        }
         if (!ALLOWED_ROLES.contains(normalized)) {
             return ROLE_USER;
         }

@@ -10,14 +10,16 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ContentDto {
+public class ModerationItemDto {
 
     private Long id;
+    private String type;
+    private String title;
     private String description;
-    
+
     @JsonProperty("content_type")
     private String contentType;
-    
+
     @JsonProperty("file_url")
     private String fileUrl;
 
@@ -27,34 +29,17 @@ public class ContentDto {
     @JsonProperty("location_name")
     private String locationName;
 
-    @JsonProperty("is_verified")
-    private Boolean isVerified;
-
     @JsonProperty("verification_status")
     private String verificationStatus;
 
     @JsonProperty("rejection_reason")
     private String rejectionReason;
 
-    @JsonProperty("exif_data")
-    private String exifData;
+    @JsonProperty("user_id")
+    private Long userId;
 
-    @JsonProperty("view_count")
-    private Long viewCount;
-
-    @JsonProperty("like_count")
-    private Long likeCount;
-
-    @JsonProperty("liked_by_current_user")
-    private Boolean likedByCurrentUser;
-
-    @JsonProperty("share_type")
-    private String shareType;
-
-    private String tags;
-
-    @JsonProperty("user")
-    private UserDto user;
+    @JsonProperty("username")
+    private String username;
 
     @JsonProperty("created_at")
     private String createdAt;

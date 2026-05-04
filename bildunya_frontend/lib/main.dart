@@ -17,6 +17,8 @@ import 'features/auth/screens/splash_screen.dart';
 import 'features/content/providers/contents_provider.dart';
 import 'features/map/providers/custom_locations_provider.dart';
 import 'features/chat/providers/chat_inbox_provider.dart';
+import 'features/moderation/providers/moderation_provider.dart';
+import 'features/moderation/screens/moderation_queue_view.dart';
 import 'features/profile/providers/profile_provider.dart';
 import 'features/content/screens/content_detail_view.dart';
 import 'features/content/screens/create_content_view.dart';
@@ -38,7 +40,9 @@ void main() {
     MultiProvider(
       providers: [
         Provider<ContentRepository>.value(value: contentRepository),
-        Provider<CustomLocationRepository>.value(value: customLocationRepository),
+        Provider<CustomLocationRepository>.value(
+          value: customLocationRepository,
+        ),
         Provider<CommentRepository>.value(value: commentRepository),
         Provider<ChatRepository>.value(value: chatRepository),
         ChangeNotifierProvider(
@@ -46,9 +50,7 @@ void main() {
               ChatInboxProvider(ctx.read<ChatRepository>())..load(),
         ),
         Provider<ProfileRepository>.value(value: profileRepository),
-        ChangeNotifierProvider(
-          create: (_) => AuthProvider(authRepository),
-        ),
+        ChangeNotifierProvider(create: (_) => AuthProvider(authRepository)),
         ChangeNotifierProvider(
           create: (_) => ContentsProvider(contentRepository),
         ),
@@ -90,6 +92,10 @@ class BilDunyaApp extends StatelessWidget {
           }
           return ContentDetailView(args: args);
         },
+        ModerationQueueView.routeName: (context) => ChangeNotifierProvider(
+          create: (ctx) => ModerationProvider(ctx.read<ContentRepository>()),
+          child: const ModerationQueueView(),
+        ),
       },
     );
   }

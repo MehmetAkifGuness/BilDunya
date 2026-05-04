@@ -57,6 +57,9 @@ public class SecurityConfig {
                         .requestMatchers("/health", "/api/health", "/error").permitAll()
                         .requestMatchers(HttpMethod.GET, "/contents/nearby", "/api/contents/nearby").permitAll()
                         .requestMatchers(HttpMethod.GET, "/custom-locations/nearby", "/api/custom-locations/nearby").permitAll()
+                        .requestMatchers("/moderation", "/moderation/**", "/api/moderation", "/api/moderation/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/contents/moderation/queue", "/api/contents/moderation/queue").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/contents/*/moderation", "/api/contents/*/moderation").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 // Doğru filtre sırası hizalaması

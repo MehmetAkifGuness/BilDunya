@@ -1,7 +1,7 @@
 package com.bildunya.controller;
 
-import com.bildunya.dto.ContentDto;
 import com.bildunya.dto.ModerateContentRequest;
+import com.bildunya.dto.ModerationItemDto;
 import com.bildunya.security.UserPrincipal;
 import com.bildunya.service.ModerationService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -35,36 +35,75 @@ public class ModerationController {
     @GetMapping("/pending")
     @SecurityRequirement(name = "Bearer Authentication")
     @Operation(summary = "Get pending content queue")
-    public ResponseEntity<Page<ContentDto>> getPendingContent(
+    public ResponseEntity<Page<ModerationItemDto>> getPendingContent(
             Authentication authentication,
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "20") Integer size) {
 
         UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        return ResponseEntity.ok(moderationService.getPendingContent(principal.getUsername(), pageable));
+        return ResponseEntity.ok(moderationService.getPendingItems(principal.getUsername(), pageable));
+    }
+
+    @GetMapping
+    @SecurityRequirement(name = "Bearer Authentication")
+    @Operation(summary = "Get moderation queue by status")
+    public ResponseEntity<Page<ModerationItemDto>> getQueue(
+            Authentication authentication,
+            @RequestParam(defaultValue = "PENDING") String status,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "20") Integer size) {
+
+        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        return ResponseEntity.ok(moderationService.getItemsByStatus(principal.getUsername(), status, pageable));
     }
 
     @PostMapping("/{id}/approve")
     @SecurityRequirement(name = "Bearer Authentication")
     @Operation(summary = "Approve pending content")
-    public ResponseEntity<ContentDto> approveContent(
+    public ResponseEntity<ModerationItemDto> approveContent(
             Authentication authentication,
             @PathVariable Long id) {
 
         UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
-        return ResponseEntity.ok(moderationService.approveContent(principal.getUsername(), id));
+        return ResponseEntity.ok(moderationService.approveItem(principal.getUsername(), "CONTENT", id));
+    }
+
+    @PostMapping("/{type}/{id}/approve")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @Operation(summary = "Approve pending moderation item")
+    public ResponseEntity<ModerationItemDto> approveItem(
+            Authentication authentication,
+            @PathVariable String type,
+            @PathVariable Long id) {
+
+        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
+        return ResponseEntity.ok(moderationService.approveItem(principal.getUsername(), type, id));
     }
 
     @PostMapping("/{id}/reject")
     @SecurityRequirement(name = "Bearer Authentication")
     @Operation(summary = "Reject pending content")
-    public ResponseEntity<ContentDto> rejectContent(
+    public ResponseEntity<ModerationItemDto> rejectContent(
             Authentication authentication,
             @PathVariable Long id,
             @RequestBody(required = false) ModerateContentRequest request) {
 
         UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
-        return ResponseEntity.ok(moderationService.rejectContent(principal.getUsername(), id, request));
+        return ResponseEntity.ok(moderationService.rejectItem(principal.getUsername(), "CONTENT", id, request));
+    }
+
+    @PostMapping("/{type}/{id}/reject")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @Operation(summary = "Reject pending moderation item")
+    public ResponseEntity<ModerationItemDto> rejectItem(
+            Authentication authentication,
+            @PathVariable String type,
+            @PathVariable Long id,
+            @RequestBody(required = false) ModerateContentRequest request) {
+
+        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
+        return ResponseEntity.ok(moderationService.rejectItem(principal.getUsername(), type, id, request));
     }
 }

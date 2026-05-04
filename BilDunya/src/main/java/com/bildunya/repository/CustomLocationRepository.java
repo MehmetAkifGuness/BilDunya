@@ -86,4 +86,8 @@ public interface CustomLocationRepository extends JpaRepository<CustomLocation, 
                                                          Pageable pageable);
 
     Page<CustomLocation> findByUserAndIsDeletedFalseAndVerificationStatus(User user, String verificationStatus, Pageable pageable);
+
+    Page<CustomLocation> findByVerificationStatusAndIsDeletedFalse(String verificationStatus, Pageable pageable);
+
+    long countByVerificationStatusAndIsDeletedFalse(String verificationStatus);
 }

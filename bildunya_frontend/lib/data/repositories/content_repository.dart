@@ -8,6 +8,7 @@ import '../../core/network/dio_error_message.dart';
 import '../models/content_dto.dart';
 import '../models/create_content_request.dart';
 import '../models/moderate_content_request.dart';
+import '../models/moderation_item_dto.dart';
 import '../models/page_response.dart';
 
 class ContentRepository {
@@ -153,19 +154,17 @@ class ContentRepository {
     }
   }
 
-  Future<PagedContentResult> getModerationQueue({
+  Future<PagedModerationItemResult> getModerationQueue({
     String verificationStatus = 'PENDING',
     int page = 0,
     int size = 20,
   }) async {
     try {
       final status = verificationStatus.trim().toUpperCase();
-      final path = status == 'PENDING'
-          ? '/moderation/pending'
-          : '/contents/moderation/queue';
+      final path = status == 'PENDING' ? '/moderation/pending' : '/moderation';
       final query = <String, dynamic>{'page': page, 'size': size};
       if (status != 'PENDING') {
-        query['verificationStatus'] = status;
+        query['status'] = status;
       }
       final res = await _dio.get<Map<String, dynamic>>(
         path,
@@ -173,7 +172,7 @@ class ContentRepository {
       );
       final body = res.data;
       if (body == null) throw Exception('Boş yanıt');
-      return PagedContentResult.fromJson(body);
+      return PagedModerationItemResult.fromJson(body);
     } on DioException catch (e) {
       throw Exception(dioErrorMessage(e));
     }
@@ -191,6 +190,45 @@ class ContentRepository {
       final body = res.data;
       if (body == null) throw Exception('Boş yanıt');
       return ContentDto.fromJson(body);
+    } on DioException catch (e) {
+      throw Exception(dioErrorMessage(e));
+    }
+  }
+
+  Future<ModerationItemDto> approveModerationItem({
+    required String type,
+    required int id,
+  }) async {
+    try {
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/moderation/$type/$id/approve',
+      );
+      final body = res.data;
+      if (body == null) throw Exception('Boş yanıt');
+      return ModerationItemDto.fromJson(body);
+    } on DioException catch (e) {
+      throw Exception(dioErrorMessage(e));
+    }
+  }
+
+  Future<ModerationItemDto> rejectModerationItem({
+    required String type,
+    required int id,
+    String? rejectionReason,
+  }) async {
+    try {
+      final data = <String, dynamic>{};
+      final reason = rejectionReason?.trim();
+      if (reason != null && reason.isNotEmpty) {
+        data['rejectionReason'] = reason;
+      }
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/moderation/$type/$id/reject',
+        data: data,
+      );
+      final body = res.data;
+      if (body == null) throw Exception('Boş yanıt');
+      return ModerationItemDto.fromJson(body);
     } on DioException catch (e) {
       throw Exception(dioErrorMessage(e));
     }
@@ -214,9 +252,27 @@ class ContentRepository {
     String? rejectionReason,
   }) async {
     try {
+      final data = <String, dynamic>{};
+      final reason = rejectionReason?.trim();
+      if (reason != null && reason.isNotEmpty) {
+        data['rejectionReason'] = reason;
+      }
       final res = await _dio.post<Map<String, dynamic>>(
         '/moderation/$contentId/reject',
-        data: {'rejectionReason': ?rejectionReason},
+        data: data,
+      );
+      final body = res.data;
+      if (body == null) throw Exception('Boş yanıt');
+      return ContentDto.fromJson(body);
+    } on DioException catch (e) {
+      throw Exception(dioErrorMessage(e));
+    }
+  }
+
+  Future<ContentDto> toggleLike({required int contentId}) async {
+    try {
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/contents/$contentId/toggle-like',
       );
       final body = res.data;
       if (body == null) throw Exception('Boş yanıt');

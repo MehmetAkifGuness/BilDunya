@@ -32,7 +32,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (jwt != null && tokenProvider.validateToken(jwt)) {
                 String username = tokenProvider.getUsernameFromToken(jwt);
-                String tokenRole = tokenProvider.getRoleFromToken(jwt);
                 long tokenVersion = tokenProvider.getTokenVersionFromToken(jwt);
 
                 User user = userRepository.findByUsernameIgnoreCase(username).orElse(null);
@@ -43,9 +42,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     long userVersion = user.getTokenVersion() == null ? 0L : user.getTokenVersion();
                     if (tokenVersion == userVersion) {
                         String userRole = normalizeRole(user.getRole());
-                        if (!normalizeRole(tokenRole).equals(userRole)) {
-                            userRole = normalizeRole(tokenRole);
-                        }
                         UserPrincipal userPrincipal = new UserPrincipal(user.getUsername(), userRole);
                         Authentication authentication = new JwtAuthenticationToken(userPrincipal);
                         SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -64,6 +60,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return "USER";
         }
         String normalized = role.trim().toUpperCase(Locale.ROOT);
+        if (normalized.startsWith("ROLE_")) {
+            normalized = normalized.substring("ROLE_".length());
+        }
         return switch (normalized) {
             case "ADMIN", "MODERATOR", "USER" -> normalized;
             default -> "USER";

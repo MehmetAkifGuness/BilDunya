@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../core/constants/api_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radii.dart';
+import '../../core/utils/app_snackbar.dart';
 import '../../core/widgets/content_verification_badge.dart';
 import '../../data/models/content_dto.dart';
 import '../content/providers/contents_provider.dart';
@@ -101,6 +102,10 @@ class _FeedPostCard extends StatelessWidget {
     final author = content.user?.displayName ?? 'Gezgin';
     final avatarUrl = ApiConfig.resolveFileUrl(content.user?.profilePhotoUrl);
     final imageUrl = ApiConfig.resolveFileUrl(content.fileUrl);
+    final likeLoading = context.watch<ContentsProvider>().isLikeLoading(
+      content.id,
+    );
+    final liked = content.isLikedByCurrentUser;
     final body = content.description?.trim().isNotEmpty == true
         ? content.description!
         : 'Bu içerik için açıklama yok.';
@@ -222,14 +227,46 @@ class _FeedPostCard extends StatelessWidget {
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        Icon(
-                          Symbols.favorite,
-                          size: 20,
-                          color: AppColors.secondary.withValues(alpha: 0.7),
+                        IconButton(
+                          visualDensity: VisualDensity.compact,
+                          tooltip: liked ? 'Beğeniyi kaldır' : 'Beğen',
+                          onPressed: likeLoading
+                              ? null
+                              : () async {
+                                  final result = await context
+                                      .read<ContentsProvider>()
+                                      .toggleLike(content);
+                                  if (!context.mounted ||
+                                      result.error == null) {
+                                    return;
+                                  }
+                                  showAppSnackBar(
+                                    context,
+                                    result.error!,
+                                    isError: true,
+                                  );
+                                },
+                          icon: likeLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Icon(
+                                  Symbols.favorite,
+                                  size: 22,
+                                  fill: liked ? 1.0 : 0.0,
+                                  color: liked
+                                      ? AppColors.error
+                                      : AppColors.secondary.withValues(
+                                          alpha: 0.7,
+                                        ),
+                                ),
                         ),
-                        const SizedBox(width: 6),
                         Text(
-                          '${content.viewCount ?? 0}',
+                          '${content.safeLikeCount}',
                           style: theme.textTheme.labelMedium?.copyWith(
                             color: AppColors.secondary,
                           ),

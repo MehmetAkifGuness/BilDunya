@@ -12,11 +12,9 @@ import '../../../core/utils/app_snackbar.dart';
 import '../../../data/models/content_dto.dart';
 import '../../../data/models/user_dto.dart';
 import '../../../data/models/user_gamification_dto.dart';
-import '../../../data/repositories/content_repository.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../content/screens/content_detail_view.dart';
-import '../../moderation/providers/moderation_provider.dart';
 import '../../moderation/screens/moderation_queue_view.dart';
 import '../providers/profile_provider.dart';
 import 'achievements_view.dart';
@@ -170,8 +168,7 @@ class _ProfileViewState extends State<ProfileView>
             body: const Center(child: Text('Profil yüklenemedi.')),
           );
         }
-        final role = (user.role ?? '').trim().toUpperCase();
-        final isModerator = role == 'ADMIN' || role == 'MODERATOR';
+        final isAdmin = auth.isAdmin || user.isAdmin;
 
         return Scaffold(
           backgroundColor: AppColors.surfaceContainerLowest,
@@ -198,18 +195,11 @@ class _ProfileViewState extends State<ProfileView>
                     ),
                   );
                 },
-                onModerationQueue: isModerator
+                onModerationQueue: isAdmin
                     ? () {
-                        Navigator.of(context).push<void>(
-                          MaterialPageRoute<void>(
-                            builder: (ctx) => ChangeNotifierProvider(
-                              create: (_) => ModerationProvider(
-                                ctx.read<ContentRepository>(),
-                              ),
-                              child: const ModerationQueueView(),
-                            ),
-                          ),
-                        );
+                        Navigator.of(
+                          context,
+                        ).pushNamed(ModerationQueueView.routeName);
                       }
                     : null,
                 onAchievements: () {
@@ -488,7 +478,7 @@ class _ProfileHeader extends StatelessWidget {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Moderasyon Kuyruğu',
+                          'Moderasyon Paneli',
                           style: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w800,
                             color: AppColors.onSurface,

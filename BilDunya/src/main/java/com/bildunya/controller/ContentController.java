@@ -59,8 +59,8 @@ public class ContentController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get content by ID")
-    public ResponseEntity<ContentDto> getContentById(@PathVariable Long id) {
-        ContentDto content = contentService.getContentById(id);
+    public ResponseEntity<ContentDto> getContentById(Authentication authentication, @PathVariable Long id) {
+        ContentDto content = contentService.getContentById(id, usernameFrom(authentication));
         return ResponseEntity.ok(content);
     }
 
@@ -86,10 +86,16 @@ public class ContentController {
             @RequestParam(defaultValue = "5") Double radiusKm,
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "20") Integer size,
-            @RequestParam(defaultValue = "created_at") String sortBy) {
+            @RequestParam(defaultValue = "created_at") String sortBy,
+            Authentication authentication) {
 
         Pageable pageable = PageRequest.of(page, size);
-        Page<ContentDto> contents = contentService.getNearbyContent(latitude, longitude, radiusKm, pageable);
+        Page<ContentDto> contents = contentService.getNearbyContent(
+                latitude,
+                longitude,
+                radiusKm,
+                pageable,
+                usernameFrom(authentication));
 
         return ResponseEntity.ok(contents);
     }
@@ -97,11 +103,12 @@ public class ContentController {
     @GetMapping("/verified")
     @Operation(summary = "Get verified content")
     public ResponseEntity<Page<ContentDto>> getVerifiedContent(
+            Authentication authentication,
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "20") Integer size) {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<ContentDto> contents = contentService.getVerifiedContent(pageable);
+        Page<ContentDto> contents = contentService.getVerifiedContent(pageable, usernameFrom(authentication));
 
         return ResponseEntity.ok(contents);
     }
@@ -158,6 +165,14 @@ public class ContentController {
         return ResponseEntity.ok(content);
     }
 
+    @PostMapping("/{id}/toggle-like")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @Operation(summary = "Toggle like for a content")
+    public ResponseEntity<ContentDto> toggleLike(Authentication authentication, @PathVariable Long id) {
+        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
+        return ResponseEntity.ok(contentService.toggleLike(id, principal.getUsername()));
+    }
+
     @GetMapping("/user/{userId}")
     @Operation(summary = "Get user's content")
     public ResponseEntity<Page<ContentDto>> getUserContent(
@@ -180,5 +195,12 @@ public class ContentController {
 
         contentService.deleteContent(id, principal.getUsername());
         return ResponseEntity.noContent().build();
+    }
+
+    private static String usernameFrom(Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserPrincipal principal)) {
+            return null;
+        }
+        return principal.getUsername();
     }
 }
