@@ -86,7 +86,13 @@ public interface ChatConversationRepository extends JpaRepository<ChatConversati
                     JOIN users u2 ON u2.id = c.user2_id
                     WHERE c.is_deleted = false
                       AND (c.user1_id = :userId OR c.user2_id = :userId)
-                    ORDER BY "lastMessageCreatedAt" DESC NULLS LAST, c.created_at DESC
+                    ORDER BY (
+                        SELECT m.created_at
+                        FROM chat_messages m
+                        WHERE m.is_deleted = false AND m.conversation_id = c.id
+                        ORDER BY m.created_at DESC
+                        LIMIT 1
+                    ) DESC NULLS LAST, c.created_at DESC
                     """,
             countQuery = """
                     SELECT COUNT(*)

@@ -15,6 +15,17 @@ import '../providers/chat_inbox_provider.dart';
 import '../providers/chat_provider.dart';
 import 'chat_view.dart';
 
+/// [chat_view.dart] içindeki `_parseStoryReply` ile aynı mantık (önizleme metni tutarlı olsun).
+(String?, String) _parseStoryReplyPrefix(String raw) {
+  final re = RegExp(r'^\[REPLY:([^\]]*)\]\s*');
+  final m = re.firstMatch(raw);
+  if (m == null) return (null, raw);
+  final title = (m.group(1) ?? '').trim();
+  final body = raw.substring(m.end);
+  if (title.isEmpty) return (null, raw);
+  return (title, body);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Ana Widget
 // ─────────────────────────────────────────────────────────────────────────────
@@ -28,6 +39,7 @@ class ChatInboxView extends StatefulWidget {
 
 class _ChatInboxViewState extends State<ChatInboxView> {
   final Set<String> _dismissedKeys = {};
+  String _inboxSearchQuery = '';
 
   static String _rowKey(ConversationSummaryDto c) =>
       '${c.id ?? 'x'}_${c.otherUsername ?? ''}';
@@ -100,7 +112,10 @@ class _ChatInboxViewState extends State<ChatInboxView> {
     );
     if (context.mounted) {
       unawaited(context.read<ChatInboxProvider>().load());
-      setState(() => _dismissedKeys.clear());
+      setState(() {
+        _dismissedKeys.clear();
+        _inboxSearchQuery = '';
+      });
     }
   }
 
@@ -143,14 +158,33 @@ class _ChatInboxViewState extends State<ChatInboxView> {
 
     if (context.mounted) {
       await context.read<ChatInboxProvider>().load();
-      setState(() => _dismissedKeys.clear());
+      setState(() {
+        _dismissedKeys.clear();
+        _inboxSearchQuery = '';
+      });
     }
   }
 
   // ── Yenile ───────────────────────────────────────────────────────────────
   Future<void> _reloadInbox(BuildContext context) async {
     await context.read<ChatInboxProvider>().load();
-    if (mounted) setState(() => _dismissedKeys.clear());
+    if (mounted) {
+      setState(() {
+        _dismissedKeys.clear();
+      });
+    }
+  }
+
+  bool _conversationMatchesSearch(ConversationSummaryDto c) {
+    final q = _inboxSearchQuery.trim().toLowerCase();
+    if (q.isEmpty) return true;
+    final title = _ConversationTile.displayName(c).toLowerCase();
+    if (title.contains(q)) return true;
+    final peer = (c.otherUsername ?? '').trim().toLowerCase();
+    if (peer.contains(q)) return true;
+    final last = (c.lastMessage ?? '').toLowerCase();
+    if (last.contains(q)) return true;
+    return false;
   }
 
   // ── Build ─────────────────────────────────────────────────────────────────
@@ -244,6 +278,7 @@ class _ChatInboxViewState extends State<ChatInboxView> {
             // ── Veri var ─────────────────────────────────────────────────
             final visible = p.conversations
                 .where((c) => !_dismissedKeys.contains(_rowKey(c)))
+                .where(_conversationMatchesSearch)
                 .toList();
 
             return Scaffold(
@@ -265,7 +300,12 @@ class _ChatInboxViewState extends State<ChatInboxView> {
                     height: index == 0 ? 14 : 4,
                   ),
                   itemBuilder: (context, index) {
-                    if (index == 0) return const _InboxSearchBar();
+                    if (index == 0) {
+                      return _InboxSearchBar(
+                        onChanged: (v) =>
+                            setState(() => _inboxSearchQuery = v),
+                      );
+                    }
 
                     final c = visible[index - 1];
                     final key = _rowKey(c);
@@ -339,7 +379,9 @@ class _ChatInboxViewState extends State<ChatInboxView> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _InboxSearchBar extends StatefulWidget {
-  const _InboxSearchBar();
+  const _InboxSearchBar({required this.onChanged});
+
+  final ValueChanged<String> onChanged;
 
   @override
   State<_InboxSearchBar> createState() => _InboxSearchBarState();
@@ -365,6 +407,7 @@ class _InboxSearchBarState extends State<_InboxSearchBar> {
     final theme = Theme.of(context);
     return TextField(
       controller: _controller,
+      onChanged: widget.onChanged,
       style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.onSurface),
       cursorColor: AppColors.primaryContainer,
       decoration: InputDecoration(
@@ -421,23 +464,26 @@ class _ConversationTile extends StatelessWidget {
   final String? myUsername;
   final VoidCallback onTap;
 
-  static final RegExp _replyTag = RegExp(r'^\[REPLY:[^\]]+\]\s*');
-
   // ── Yardımcı metodlar ─────────────────────────────────────────────────────
 
-  String _displayName(ConversationSummaryDto c) {
+  /// Arama ve liste için görünen isim (inbox ile aynı kurallar).
+  static String displayName(ConversationSummaryDto c) {
     final full = (c.otherFullName ?? '').trim();
     if (full.isNotEmpty) return full;
     final peer = (c.otherUsername ?? '').trim();
     return peer.isNotEmpty ? peer : '?';
   }
 
+  String _displayName(ConversationSummaryDto c) => displayName(c);
+
+  /// Sunucu göndereni ile bildirmezse güvenli tarafta kal: `[REPLY:…]` öneki
+  /// her iki tarafta da olabileceğinden, buna göre "benim" sanmak yanlış olur.
   bool _lastMessageIsMine(ConversationSummaryDto c) {
     final me = (myUsername ?? '').trim().toLowerCase();
     if (me.isEmpty) return false;
     final sender = (c.lastMessageSenderUsername ?? '').trim().toLowerCase();
-    if (sender.isNotEmpty) return sender == me;
-    return (c.lastMessage ?? '').trim().startsWith('[REPLY:');
+    if (sender.isEmpty) return false;
+    return sender == me;
   }
 
   /// Ham son mesajı parse ederek görüntülenecek metni döndürür.
@@ -445,8 +491,8 @@ class _ConversationTile extends StatelessWidget {
   String _subtitle(ConversationSummaryDto c) {
     final raw = (c.lastMessage ?? '').trim();
     if (raw.isEmpty) return 'Henüz mesaj yok';
-    final body = raw.replaceFirst(_replyTag, '').trim();
-    final shown = body.isNotEmpty ? body : raw;
+    final (replyTitle, body) = _parseStoryReplyPrefix(raw);
+    final shown = replyTitle == null ? raw : body.trim().isNotEmpty ? body.trim() : raw;
     if (_lastMessageIsMine(c)) return 'Siz: $shown';
     return shown;
   }

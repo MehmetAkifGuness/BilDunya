@@ -97,7 +97,7 @@ public class ChatService {
     }
 
     public Page<ConversationSummaryDto> getConversations(String username, Pageable pageable) {
-        User user = userRepository.findByUsername(username)
+        User user = userRepository.findByUsernameIgnoreCase(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");

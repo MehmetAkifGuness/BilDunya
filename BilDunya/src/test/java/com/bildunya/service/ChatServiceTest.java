@@ -182,7 +182,7 @@ class ChatServiceTest {
 
         User me = User.builder().username("me").build();
         me.setId(9L);
-        when(userRepository.findByUsername("me")).thenReturn(Optional.of(me));
+        when(userRepository.findByUsernameIgnoreCase("me")).thenReturn(Optional.of(me));
 
         LocalDateTime lastAt = LocalDateTime.of(2026, 5, 4, 12, 30, 15);
         ChatConversationRepository.ConversationSummaryProjection proj =
