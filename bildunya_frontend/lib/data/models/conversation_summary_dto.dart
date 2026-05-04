@@ -26,9 +26,8 @@ class ConversationSummaryDto {
 
   factory ConversationSummaryDto.fromJson(Map<String, dynamic> json) {
     return ConversationSummaryDto(
-      id: (json['id'] as num?)?.toInt(),
-      otherUserId: (json['other_user_id'] as num?)?.toInt() ??
-          (json['otherUserId'] as num?)?.toInt(),
+      id: _toInt(json['id']),
+      otherUserId: _toInt(json['other_user_id']) ?? _toInt(json['otherUserId']),
       otherUsername: json['other_username'] as String? ??
           json['otherUsername'] as String?,
       otherFullName: json['other_full_name'] as String? ??
@@ -40,13 +39,20 @@ class ConversationSummaryDto {
               json['lastMessageSenderUsername'] as String?,
       lastMessageAt: json['last_message_at'] as String? ??
           json['lastMessageAt'] as String?,
-      unreadCount: (json['unread_count'] as num?)?.toInt() ??
-          (json['unreadCount'] as num?)?.toInt(),
-      relatedContentId: (json['related_content_id'] as num?)?.toInt() ??
-          (json['relatedContentId'] as num?)?.toInt(),
+      unreadCount: _toInt(json['unread_count']) ?? _toInt(json['unreadCount']),
+      relatedContentId: _toInt(json['related_content_id']) ??
+          _toInt(json['relatedContentId']),
       relatedContentLabel: json['related_content_label'] as String? ??
           json['relatedContentLabel'] as String?,
     );
+  }
+
+  static int? _toInt(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    if (v is String) return int.tryParse(v);
+    return null;
   }
 }
 

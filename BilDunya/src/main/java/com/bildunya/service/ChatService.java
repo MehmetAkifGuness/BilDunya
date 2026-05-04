@@ -24,7 +24,11 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.sql.Timestamp;
 import java.util.Objects;
@@ -269,6 +273,15 @@ public class ChatService {
         if (temporal == null) return null;
         if (temporal instanceof LocalDateTime dt) {
             return dt.format(formatter);
+        }
+        if (temporal instanceof Instant instant) {
+            return LocalDateTime.ofInstant(instant, ZoneId.systemDefault()).format(formatter);
+        }
+        if (temporal instanceof OffsetDateTime odt) {
+            return odt.toLocalDateTime().format(formatter);
+        }
+        if (temporal instanceof ZonedDateTime zdt) {
+            return zdt.toLocalDateTime().format(formatter);
         }
         if (temporal instanceof Timestamp ts) {
             LocalDateTime dt = ts.toLocalDateTime();

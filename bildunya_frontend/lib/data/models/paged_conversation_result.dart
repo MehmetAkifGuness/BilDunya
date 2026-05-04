@@ -21,8 +21,10 @@ class PagedConversationResult {
     final list = <ConversationSummaryDto>[];
     if (raw is List) {
       for (final e in raw) {
-        if (e is Map<String, dynamic>) {
-          list.add(ConversationSummaryDto.fromJson(e));
+        if (e is Map) {
+          list.add(
+            ConversationSummaryDto.fromJson(Map<String, dynamic>.from(e)),
+          );
         }
       }
     }
