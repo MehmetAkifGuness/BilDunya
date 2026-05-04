@@ -31,7 +31,7 @@ class AuthInterceptor extends Interceptor {
     final requestOptions = err.requestOptions;
     final alreadyRetried = requestOptions.extra['retried'] == true;
 
-    // Backend bazen yetkisiz istekler iÃ§in 401 yerine 403 dÃ¶ndÃ¼rebiliyor.
+    // Backend bazen yetkisiz istekler için 401 yerine 403 döndürebiliyor.
     // Refresh denemesini her iki durumda da yap.
     if ((statusCode != 401 && statusCode != 403) ||
         alreadyRetried ||
@@ -57,7 +57,6 @@ class AuthInterceptor extends Interceptor {
           receiveTimeout: const Duration(seconds: 30),
           headers: {
             Headers.acceptHeader: Headers.jsonContentType,
-            Headers.contentTypeHeader: Headers.jsonContentType,
           },
         ),
       );

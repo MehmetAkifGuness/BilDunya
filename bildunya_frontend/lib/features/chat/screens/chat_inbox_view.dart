@@ -14,6 +14,73 @@ import 'chat_view.dart';
 class ChatInboxView extends StatelessWidget {
   const ChatInboxView({super.key});
 
+  Future<void> _promptAndOpenChat(BuildContext context) async {
+    final auth = context.read<AuthProvider>();
+    if (!auth.isAuthenticated) {
+      showAppSnackBar(context, 'Sohbet için giriş yapın.', isError: true);
+      return;
+    }
+    final me = auth.user?.username;
+    if (me == null || me.isEmpty) return;
+
+    final controller = TextEditingController();
+    final peer = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Yeni sohbet'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'Kullanıcı adı',
+            hintText: 'örn: ali123',
+          ),
+          autofocus: true,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (v) => Navigator.of(ctx).pop(v.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Vazgeç'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
+            child: const Text('Aç'),
+          ),
+        ],
+      ),
+    );
+
+    controller.dispose();
+    if (!context.mounted) return;
+    final username = (peer ?? '').trim();
+    if (username.isEmpty) return;
+
+    final display = username;
+    int? convId;
+    try {
+      final conv = await context.read<ChatRepository>().openConversation(username);
+      convId = conv.id;
+    } catch (_) {
+      convId = null;
+    }
+    if (!context.mounted) return;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (ctx) => ChangeNotifierProvider(
+          create: (_) => ChatProvider(
+            repository: ctx.read<ChatRepository>(),
+            myUsername: me,
+            conversationId: convId,
+            peerUsername: username,
+            peerDisplayName: display,
+          )..init(),
+          child: const ChatView(),
+        ),
+      ),
+    );
+  }
+
   Future<void> _openConversation(
     BuildContext context,
     ConversationSummaryDto c,
@@ -24,9 +91,9 @@ class ChatInboxView extends StatelessWidget {
       return;
     }
     final me = auth.user?.username;
-    final convId = c.id;
     final peer = c.otherUsername;
-    if (me == null || convId == null || peer == null || peer.isEmpty) return;
+    final convId = c.id;
+    if (me == null || peer == null || peer.isEmpty) return;
     final name = (c.otherFullName ?? '').trim().isNotEmpty
         ? c.otherFullName!.trim()
         : peer;
@@ -97,9 +164,20 @@ class ChatInboxView extends StatelessWidget {
                             style: const TextStyle(color: AppColors.error),
                           ),
                           const SizedBox(height: 16),
-                          FilledButton(
-                            onPressed: p.load,
-                            child: const Text('Yeniden dene'),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              FilledButton(
+                                onPressed: p.load,
+                                child: const Text('Yeniden dene'),
+                              ),
+                              const SizedBox(width: 10),
+                              OutlinedButton.icon(
+                                onPressed: () => _promptAndOpenChat(context),
+                                icon: const Icon(Symbols.chat),
+                                label: const Text('Sohbet başlat'),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -113,6 +191,11 @@ class ChatInboxView extends StatelessWidget {
                 appBar: AppBar(
                   title: const Text('Mesajlar'),
                   actions: [
+                    IconButton(
+                      tooltip: 'Yeni sohbet',
+                      onPressed: () => _promptAndOpenChat(context),
+                      icon: const Icon(Symbols.add_comment),
+                    ),
                     IconButton(
                       tooltip: 'Yenile',
                       onPressed: p.loading ? null : p.load,

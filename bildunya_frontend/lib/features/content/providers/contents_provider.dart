@@ -37,7 +37,11 @@ class ContentsProvider extends ChangeNotifier {
       );
       await loadVerified();
       await loadRecommended();
-      await loadNearby(latitude: 38.6431, longitude: 34.8282, radiusKm: 40);
+      await loadNearby(
+        latitude: request.latitude,
+        longitude: request.longitude,
+        radiusKm: 40,
+      );
       return null;
     } catch (e) {
       return e.toString();

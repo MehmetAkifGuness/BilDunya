@@ -100,7 +100,7 @@ class ContentRepository {
         queryParameters: {'page': page, 'size': size},
       );
       final body = res.data;
-      if (body == null) throw Exception('BoÅŸ yanÄ±t');
+      if (body == null) throw Exception('Boş yanıt');
       return PagedContentResult.fromJson(body);
     } on DioException catch (e) {
       throw Exception(dioErrorMessage(e));

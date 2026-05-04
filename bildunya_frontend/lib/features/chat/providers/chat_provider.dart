@@ -7,6 +7,7 @@ import 'package:stomp_dart_client/stomp_dart_client.dart';
 import '../../../core/constants/api_config.dart';
 import '../../../core/utils/user_friendly_error.dart';
 import '../../../data/models/chat_message_dto.dart';
+import '../../../data/models/send_chat_message_request.dart';
 import '../../../data/models/send_message_request.dart';
 import '../../../data/repositories/chat_repository.dart';
 
@@ -14,14 +15,15 @@ class ChatProvider extends ChangeNotifier {
   ChatProvider({
     required ChatRepository repository,
     required this.myUsername,
-    required this.conversationId,
+    int? conversationId,
     required this.peerUsername,
     required this.peerDisplayName,
-  }) : _repository = repository;
+  })  : _repository = repository,
+        _conversationId = conversationId;
 
   final ChatRepository _repository;
   final String myUsername;
-  final int conversationId;
+  int? _conversationId;
   final String peerUsername;
   final String peerDisplayName;
 
@@ -31,6 +33,8 @@ class ChatProvider extends ChangeNotifier {
   String? error;
   StompClient? _stomp;
   StompUnsubscribe? _unsub;
+
+  int? get conversationId => _conversationId;
 
   Future<void> init() async {
     await loadHistory();
@@ -42,16 +46,41 @@ class ChatProvider extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      final page = await _repository.getConversationMessages(
-        conversationId,
-        size: 100,
-      );
-      final list = List<ChatMessageDto>.from(page.content);
-      list.sort((a, b) => (a.createdAt ?? '').compareTo(b.createdAt ?? ''));
-      messages
-        ..clear()
-        ..addAll(list);
-      await _repository.markConversationAsRead(conversationId);
+      if (_conversationId != null) {
+        final page = await _repository.getConversationMessages(
+          _conversationId!,
+          size: 100,
+        );
+        final list = List<ChatMessageDto>.from(page.content);
+        list.sort((a, b) => (a.createdAt ?? '').compareTo(b.createdAt ?? ''));
+        messages
+          ..clear()
+          ..addAll(list);
+        try {
+          await _repository.markConversationAsRead(_conversationId!);
+        } catch (_) {}
+      } else {
+        final page = await _repository.getConversation(
+          peerUsername,
+          size: 100,
+        );
+        final list = List<ChatMessageDto>.from(page.content);
+        list.sort((a, b) => (a.createdAt ?? '').compareTo(b.createdAt ?? ''));
+        messages
+          ..clear()
+          ..addAll(list);
+
+        for (final m in list.reversed) {
+          if (m.conversationId != null) {
+            _conversationId = m.conversationId;
+            break;
+          }
+        }
+
+        try {
+          await _repository.markConversationAsReadByUsername(peerUsername);
+        } catch (_) {}
+      }
     } catch (e) {
       error = userFriendlyErrorMessage(e);
     } finally {
@@ -90,7 +119,19 @@ class ChatProvider extends ChangeNotifier {
         try {
           final map = jsonDecode(raw) as Map<String, dynamic>;
           final m = ChatMessageDto.fromJson(map);
-          if (m.conversationId != conversationId) return;
+          final cid = _conversationId;
+          if (cid != null) {
+            if (m.conversationId != cid) return;
+          } else {
+            final sender = m.senderUsername;
+            final receiver = m.receiverUsername;
+            final isBetween = (sender == myUsername && receiver == peerUsername) ||
+                (sender == peerUsername && receiver == myUsername);
+            if (!isBetween) return;
+            if (m.conversationId != null) {
+              _conversationId = m.conversationId;
+            }
+          }
           if (messages.any((x) => x.id != null && x.id == m.id)) return;
           messages.add(m);
           messages.sort(
@@ -98,7 +139,12 @@ class ChatProvider extends ChangeNotifier {
           );
           notifyListeners();
           if (m.senderUsername != myUsername) {
-            unawaited(_repository.markConversationAsRead(conversationId));
+            final currentCid = _conversationId;
+            if (currentCid != null) {
+              unawaited(_repository.markConversationAsRead(currentCid));
+            } else {
+              unawaited(_repository.markConversationAsReadByUsername(peerUsername));
+            }
           }
         } catch (e) {
           debugPrint('[Chat] parse frame: $e');
@@ -114,9 +160,20 @@ class ChatProvider extends ChangeNotifier {
     sending = true;
     notifyListeners();
     try {
-      final m = await _repository.sendMessageToConversation(
-        SendMessageRequest(conversationId: conversationId, content: t),
-      );
+      final cid = _conversationId;
+      final ChatMessageDto m;
+      if (cid != null) {
+        m = await _repository.sendMessageToConversation(
+          SendMessageRequest(conversationId: cid, content: t),
+        );
+      } else {
+        m = await _repository.sendMessage(
+          SendChatMessageRequest(receiverUsername: peerUsername, text: t),
+        );
+        if (m.conversationId != null) {
+          _conversationId = m.conversationId;
+        }
+      }
       if (!messages.any((x) => x.id != null && x.id == m.id)) {
         messages.add(m);
         messages.sort(

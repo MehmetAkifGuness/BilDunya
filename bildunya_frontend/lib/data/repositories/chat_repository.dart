@@ -23,7 +23,7 @@ class ChatRepository {
         queryParameters: {'page': page, 'size': size},
       );
       final body = res.data;
-      if (body == null) throw Exception('BoÅŸ yanÄ±t');
+      if (body == null) throw Exception('Boş yanıt');
       return PagedConversationResult.fromJson(body);
     } on DioException catch (e) {
       throw Exception(dioErrorMessage(e));
@@ -37,7 +37,7 @@ class ChatRepository {
         data: {'otherUsername': otherUsername},
       );
       final body = res.data;
-      if (body == null) throw Exception('BoÅŸ yanÄ±t');
+      if (body == null) throw Exception('Boş yanıt');
       return ConversationDto.fromJson(body);
     } on DioException catch (e) {
       throw Exception(dioErrorMessage(e));
@@ -55,7 +55,7 @@ class ChatRepository {
         queryParameters: {'page': page, 'size': size},
       );
       final body = res.data;
-      if (body == null) throw Exception('BoÅŸ yanÄ±t');
+      if (body == null) throw Exception('Boş yanıt');
       return PagedChatResult.fromJson(body);
     } on DioException catch (e) {
       throw Exception(dioErrorMessage(e));
@@ -70,6 +70,15 @@ class ChatRepository {
     }
   }
 
+  Future<void> markConversationAsReadByUsername(String peerUsername) async {
+    try {
+      final encoded = Uri.encodeComponent(peerUsername);
+      await _dio.post<void>('/chat/conversations/$encoded/read');
+    } on DioException catch (e) {
+      throw Exception(dioErrorMessage(e));
+    }
+  }
+
   Future<ChatMessageDto> sendMessageToConversation(
     SendMessageRequest request,
   ) async {
@@ -79,7 +88,7 @@ class ChatRepository {
         data: request.toJson(),
       );
       final body = res.data;
-      if (body == null) throw Exception('BoÅŸ yanÄ±t');
+      if (body == null) throw Exception('Boş yanıt');
       return ChatMessageDto.fromJson(body);
     } on DioException catch (e) {
       throw Exception(dioErrorMessage(e));

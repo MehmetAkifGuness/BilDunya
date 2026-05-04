@@ -23,9 +23,11 @@ import '../content/screens/content_detail_view.dart';
 import 'providers/custom_locations_provider.dart';
 import 'screens/custom_location_gallery_view.dart';
 import 'widgets/create_custom_location_sheet.dart';
+import 'widgets/create_content_pin_sheet.dart';
 
 enum _MapChip { none, historic, nature }
 enum _PinLayer { all, popular, custom }
+enum _CreatePinKind { location, photo }
 
 sealed class _MapPin {
   const _MapPin();
@@ -201,9 +203,19 @@ class _MapViewState extends State<MapView> {
 
   double _pinExploreRadiusKm(_MapPin pin) {
     return switch (pin) {
-      _PopularPin() => 35,
-      _ContentPin() => 12,
-      _CustomPin() => 12,
+      // We fetch a slightly larger area, then post-filter by a tighter radius
+      // so other nearby places don't leak into the pin gallery.
+      _PopularPin() => 8,
+      _ContentPin() => 3,
+      _CustomPin() => 3,
+    };
+  }
+
+  double _pinImageMatchRadiusKm(_MapPin pin) {
+    return switch (pin) {
+      _PopularPin() => 0.75,
+      _ContentPin() => 0.08,
+      _CustomPin() => 0.08,
     };
   }
 
@@ -254,6 +266,7 @@ class _MapViewState extends State<MapView> {
 
       final candidates = <(double km, String url)>[];
       final seen = <String>{};
+      final matchRadiusKm = _pinImageMatchRadiusKm(pin);
       for (final c in list) {
         if (c.latitude == null || c.longitude == null) continue;
         if (!_isImageContent(c)) continue;
@@ -265,6 +278,7 @@ class _MapViewState extends State<MapView> {
           pin.point,
           LatLng(c.latitude!, c.longitude!),
         );
+        if (km > matchRadiusKm) continue;
         candidates.add((km, url));
       }
 
@@ -474,7 +488,50 @@ class _MapViewState extends State<MapView> {
     }
     setState(() => _pendingPoint = point);
 
-    final created = await showModalBottomSheet<bool>(
+    final kind = await showModalBottomSheet<_CreatePinKind>(
+      context: context,
+      useSafeArea: true,
+      backgroundColor: AppColors.surfaceContainer,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppRadii.lg),
+        ),
+      ),
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Symbols.place),
+                  title: const Text('Pin (mekan) oluştur'),
+                  subtitle: const Text('Ad + açıklama, opsiyonel fotoğraf'),
+                  onTap: () => Navigator.of(context).pop(_CreatePinKind.location),
+                ),
+                ListTile(
+                  leading: const Icon(Symbols.add_a_photo),
+                  title: const Text('Bu noktaya fotoğraf ekle'),
+                  subtitle: const Text('İçerik paylaşımı oluşturur'),
+                  onTap: () => Navigator.of(context).pop(_CreatePinKind.photo),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (!mounted) return;
+    if (kind == null) {
+      setState(() => _pendingPoint = null);
+      return;
+    }
+
+    final bool? created = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -484,18 +541,28 @@ class _MapViewState extends State<MapView> {
           top: Radius.circular(AppRadii.lg),
         ),
       ),
-      builder: (context) => CreateCustomLocationSheet(point: point),
+      builder: (context) => kind == _CreatePinKind.location
+          ? CreateCustomLocationSheet(point: point)
+          : CreateContentPinSheet(point: point),
     );
 
     if (!mounted) return;
     setState(() => _pendingPoint = null);
 
     if (created == true) {
-      await _customLocations.loadNearby(
-        latitude: point.latitude,
-        longitude: point.longitude,
-        radiusKm: 40,
-      );
+      if (kind == _CreatePinKind.location) {
+        await _customLocations.loadNearby(
+          latitude: point.latitude,
+          longitude: point.longitude,
+          radiusKm: 40,
+        );
+      } else {
+        await _contents.loadNearby(
+          latitude: point.latitude,
+          longitude: point.longitude,
+          radiusKm: 40,
+        );
+      }
     }
   }
 

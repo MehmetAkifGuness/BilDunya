@@ -18,7 +18,6 @@ abstract final class DioClient {
             isRender ? const Duration(seconds: 90) : const Duration(seconds: 30),
         headers: {
           Headers.acceptHeader: Headers.jsonContentType,
-          Headers.contentTypeHeader: Headers.jsonContentType,
         },
       ),
     );

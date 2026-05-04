@@ -108,32 +108,30 @@ class _ContentDetailViewState extends State<ContentDetailView> {
     }
     final name = c.user?.displayName ?? peer;
 
+    int? convId;
     try {
       final conv = await context.read<ChatRepository>().openConversation(peer);
-      final convId = conv.id;
-      if (!mounted) return;
-      if (convId == null) {
-        showAppSnackBar(context, 'Sohbet acilamadi.', isError: true);
-        return;
-      }
-      Navigator.of(context).push<void>(
-        MaterialPageRoute<void>(
-          builder: (ctx) => ChangeNotifierProvider(
-            create: (_) => ChatProvider(
-              repository: ctx.read<ChatRepository>(),
-              myUsername: me,
-              conversationId: convId,
-              peerUsername: peer,
-              peerDisplayName: name,
-            )..init(),
-            child: const ChatView(),
-          ),
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      showAppSnackBar(context, e.toString(), isError: true);
+      convId = conv.id;
+    } catch (_) {
+      // Fallback: some server versions may not support `/conversations`.
+      convId = null;
     }
+
+    if (!mounted) return;
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (ctx) => ChangeNotifierProvider(
+          create: (_) => ChatProvider(
+            repository: ctx.read<ChatRepository>(),
+            myUsername: me,
+            conversationId: convId,
+            peerUsername: peer,
+            peerDisplayName: name,
+          )..init(),
+          child: const ChatView(),
+        ),
+      ),
+    );
   }
 
   Future<void> _openInExternalMap(ContentDto c) async {
