@@ -17,19 +17,15 @@ import '../../chat/screens/chat_view.dart';
 import '../providers/comments_provider.dart';
 import '../providers/contents_provider.dart';
 import 'comments_view.dart';
+import 'content_detail_args.dart';
 
-class ContentDetailArgs {
-  const ContentDetailArgs({required this.contentId, this.preview});
-
-  final int contentId;
-  final ContentDto? preview;
-}
+export 'content_detail_args.dart';
 
 /// Tek içerik: görsel, konum, açıklama (tam sayfa).
 class ContentDetailView extends StatefulWidget {
   const ContentDetailView({super.key, required this.args});
 
-  static const String routeName = '/content/detail';
+  static const String routeName = ContentDetailArgs.routeName;
 
   final ContentDetailArgs args;
 
@@ -142,6 +138,8 @@ class _ContentDetailViewState extends State<ContentDetailView> {
             peerUsername: peer,
             peerDisplayName: name,
             relatedContentLabel: relatedLabel,
+            relatedContentId: contentId,
+            relatedContentFileUrl: c.fileUrl,
           )..init(),
           child: const ChatView(),
         ),

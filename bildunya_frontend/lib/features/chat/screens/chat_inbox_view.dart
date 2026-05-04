@@ -74,7 +74,6 @@ class ChatInboxView extends StatelessWidget {
             conversationId: convId,
             peerUsername: username,
             peerDisplayName: display,
-            relatedContentLabel: null,
           )..init(),
           child: const ChatView(),
         ),
@@ -111,6 +110,7 @@ class ChatInboxView extends StatelessWidget {
             peerDisplayName: name,
             relatedContentLabel:
                 relatedLabel.isEmpty ? null : relatedLabel,
+            relatedContentId: c.relatedContentId,
           )..init(),
           child: const ChatView(),
         ),

@@ -6,10 +6,27 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_radii.dart';
 import '../../../core/utils/app_snackbar.dart';
+import '../../content/screens/content_detail_args.dart';
 import '../providers/chat_provider.dart';
+import '../widgets/chat_icebreakers_bar.dart';
+import '../widgets/related_content_preview_card.dart';
 
 enum _ChatMenuAction { refresh, reconnect, copyUsername }
+
+/// Sohbet metninde gizli story-yanıtı öneki: `[REPLY:Gönderi Adı] mesaj`.
+final RegExp _storyReplyPrefix = RegExp(r'^\[REPLY:([^\]]*)\]\s*');
+
+/// Önek varsa `(gönderi başlığı, görünen gövde)`; aksi halde `(null, orijinal)`.
+(String?, String) _parseStoryReply(String raw) {
+  final m = _storyReplyPrefix.firstMatch(raw);
+  if (m == null) return (null, raw);
+  final title = (m.group(1) ?? '').trim();
+  final body = raw.substring(m.end);
+  if (title.isEmpty) return (null, raw);
+  return (title, body);
+}
 
 /// Birebir sohbet (code.html Screen 3).
 class ChatView extends StatefulWidget {
@@ -53,13 +70,16 @@ class _ChatViewState extends State<ChatView> {
     });
   }
 
-  Future<void> _send(ChatProvider p) async {
-    final err = await p.send(_text.text);
+  Future<void> _send(ChatProvider p, {String? presetText}) async {
+    final body = (presetText ?? _text.text).trim();
+    final err = await p.send(body);
     if (!mounted) return;
     if (err != null) {
       showAppSnackBar(context, err, isError: true);
     } else {
-      _text.clear();
+      if (presetText == null) {
+        _text.clear();
+      }
       _scrollToEnd();
     }
   }
@@ -221,7 +241,8 @@ class _ChatViewState extends State<ChatView> {
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
-                      if ((p.relatedContentLabel ?? '').trim().isNotEmpty) ...[
+                      if (p.activeReplyContentId == null &&
+                          (p.relatedContentLabel ?? '').trim().isNotEmpty) ...[
                         const SizedBox(height: 2),
                         Text(
                           'Gönderi: ${p.relatedContentLabel!.trim()}',
@@ -306,11 +327,10 @@ class _ChatViewState extends State<ChatView> {
                   itemCount: p.messages.length,
                   itemBuilder: (context, i) {
                     final m = p.messages[i];
-                    final mine = m.senderUsername == p.myUsername;
                     return _MessageBubble(
                       text: m.text ?? '',
                       time: m.createdAt ?? '',
-                      mine: mine,
+                      mine: m.senderUsername == p.myUsername,
                     );
                   },
                 ),
@@ -319,71 +339,112 @@ class _ChatViewState extends State<ChatView> {
                 color: AppColors.surfaceContainerLow.withValues(alpha: 0.95),
                 child: SafeArea(
                   top: false,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          onPressed: _openQuickActions,
-                          icon: const Icon(Symbols.add),
-                          color: AppColors.secondary,
-                        ),
-                        Expanded(
-                          child: TextField(
-                            controller: _text,
-                            minLines: 1,
-                            maxLines: 5,
-                            enabled: !p.sending,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: AppColors.onSurface,
-                            ),
-                            decoration: InputDecoration(
-                              hintText: 'Mesaj yazın...',
-                              hintStyle: theme.textTheme.bodySmall?.copyWith(
-                                color: AppColors.onSurfaceHint,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (p.activeReplyContentId != null)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              RelatedContentPreviewCard(
+                                placeLabel:
+                                    (p.activeReplyLabel ?? '').trim().isNotEmpty
+                                        ? p.activeReplyLabel!.trim()
+                                        : '',
+                                rawFileUrl: p.activeReplyFileUrl,
+                                onOpenDetail: () {
+                                  final id = p.activeReplyContentId;
+                                  if (id == null) return;
+                                  unawaited(
+                                    Navigator.of(context).pushNamed<void>(
+                                      ContentDetailArgs.routeName,
+                                      arguments:
+                                          ContentDetailArgs(contentId: id),
+                                    ),
+                                  );
+                                },
                               ),
-                              filled: true,
-                              fillColor: AppColors.surfaceContainerLowest,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(999),
-                                borderSide: BorderSide(
-                                  color: Colors.white.withValues(alpha: 0.08),
-                                ),
+                              const SizedBox(height: 8),
+                              ChatIcebreakersBar(
+                                enabled: !p.sending,
+                                onPick: (t) =>
+                                    unawaited(_send(p, presetText: t)),
                               ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(999),
-                                borderSide: BorderSide(
-                                  color: Colors.white.withValues(alpha: 0.08),
-                                ),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 10,
-                              ),
-                            ),
-                            onSubmitted: (_) => _send(p),
+                            ],
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        IconButton.filled(
-                          style: IconButton.styleFrom(
-                            backgroundColor: AppColors.primaryContainer,
-                            foregroundColor: AppColors.onPrimary,
-                          ),
-                          onPressed: p.sending ? null : () => _send(p),
-                          icon: p.sending
-                              ? const SizedBox(
-                                  width: 22,
-                                  height: 22,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: AppColors.onPrimary,
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                        child: Row(
+                          children: [
+                            IconButton(
+                              onPressed: _openQuickActions,
+                              icon: const Icon(Symbols.add),
+                              color: AppColors.secondary,
+                            ),
+                            Expanded(
+                              child: TextField(
+                                controller: _text,
+                                minLines: 1,
+                                maxLines: 5,
+                                enabled: !p.sending,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: AppColors.onSurface,
+                                ),
+                                decoration: InputDecoration(
+                                  hintText: 'Mesaj yazın...',
+                                  hintStyle: theme.textTheme.bodySmall?.copyWith(
+                                    color: AppColors.onSurfaceHint,
                                   ),
-                                )
-                              : const Icon(Symbols.send),
+                                  filled: true,
+                                  fillColor: AppColors.surfaceContainerLowest,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(999),
+                                    borderSide: BorderSide(
+                                      color: Colors.white.withValues(alpha: 0.08),
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(999),
+                                    borderSide: BorderSide(
+                                      color: Colors.white.withValues(alpha: 0.08),
+                                    ),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 10,
+                                  ),
+                                ),
+                                onSubmitted: (_) => unawaited(_send(p)),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton.filled(
+                              style: IconButton.styleFrom(
+                                backgroundColor: AppColors.primaryContainer,
+                                foregroundColor: AppColors.onPrimary,
+                              ),
+                              onPressed: p.sending
+                                  ? null
+                                  : () => unawaited(_send(p)),
+                              icon: p.sending
+                                  ? const SizedBox(
+                                      width: 22,
+                                      height: 22,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: AppColors.onPrimary,
+                                      ),
+                                    )
+                                  : const Icon(Symbols.send),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -414,6 +475,18 @@ class _MessageBubble extends StatelessWidget {
     final fg = mine ? AppColors.onPrimary : AppColors.onSurface;
     final align = mine ? CrossAxisAlignment.end : CrossAxisAlignment.start;
 
+    final (replyTitle, bodyText) = _parseStoryReply(text);
+    final displayBody = replyTitle == null ? text : bodyText.trim();
+
+    final quoteBg = mine
+        ? AppColors.onPrimary.withValues(alpha: 0.14)
+        : AppColors.surfaceDim.withValues(alpha: 0.92);
+    final quoteBorder = mine
+        ? AppColors.onPrimary.withValues(alpha: 0.1)
+        : AppColors.outlineVariant.withValues(alpha: 0.22);
+    final quoteFg = mine ? AppColors.onPrimary : AppColors.onSurfaceVariant;
+    final quoteIcon = mine ? AppColors.onPrimary : AppColors.tertiary;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Align(
@@ -438,13 +511,54 @@ class _MessageBubble extends StatelessWidget {
               ),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                child: Text(
-                  text,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: fg,
-                    height: 1.35,
-                    fontWeight: mine ? FontWeight.w600 : FontWeight.w400,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (replyTitle != null) ...[
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: quoteBg,
+                          borderRadius: BorderRadius.circular(AppRadii.sm / 2),
+                          border: Border.all(color: quoteBorder),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Symbols.reply,
+                                size: 18,
+                                color: quoteIcon.withValues(alpha: 0.9),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Gönderi: $replyTitle',
+                                  style: theme.textTheme.labelMedium?.copyWith(
+                                    color: quoteFg,
+                                    fontWeight: FontWeight.w700,
+                                    fontStyle: FontStyle.italic,
+                                    height: 1.25,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+                    Text(
+                      displayBody,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: fg,
+                        height: 1.35,
+                        fontWeight: mine ? FontWeight.w600 : FontWeight.w400,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

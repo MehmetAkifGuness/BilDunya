@@ -19,8 +19,16 @@ class ChatProvider extends ChangeNotifier {
     required this.peerUsername,
     required this.peerDisplayName,
     this.relatedContentLabel,
+    this.relatedContentId,
+    this.relatedContentFileUrl,
   })  : _repository = repository,
-        _conversationId = conversationId;
+        _conversationId = conversationId {
+    if (relatedContentId != null) {
+      activeReplyContentId = relatedContentId;
+      activeReplyFileUrl = relatedContentFileUrl;
+      activeReplyLabel = relatedContentLabel;
+    }
+  }
 
   final ChatRepository _repository;
   final String myUsername;
@@ -30,6 +38,17 @@ class ChatProvider extends ChangeNotifier {
 
   /// Mekan detayından açıldıysa, ilişkili gönderi başlığı / özeti.
   final String? relatedContentLabel;
+
+  /// Bağlamsal sohbet: ilişkili içerik kimliği (detay sayfasına yönlendirme için).
+  final int? relatedContentId;
+
+  /// Sunucudan gelen ham `fileUrl` (görsel yolu); tam URL için `ApiConfig.resolveFileUrl`.
+  final String? relatedContentFileUrl;
+
+  /// Geçici "story yanıtı" bağlamı; composer önizlemesi için. Başarılı gönderimde sıfırlanır.
+  int? activeReplyContentId;
+  String? activeReplyFileUrl;
+  String? activeReplyLabel;
 
   final List<ChatMessageDto> messages = [];
   bool loading = false;
@@ -174,15 +193,18 @@ class ChatProvider extends ChangeNotifier {
     sending = true;
     notifyListeners();
     try {
+      final replyLabel = (activeReplyLabel ?? '').trim();
+      final outbound = replyLabel.isNotEmpty ? '[REPLY:$replyLabel] $t' : t;
+
       final cid = _conversationId;
       final ChatMessageDto m;
       if (cid != null) {
         m = await _repository.sendMessageToConversation(
-          SendMessageRequest(conversationId: cid, content: t),
+          SendMessageRequest(conversationId: cid, content: outbound),
         );
       } else {
         m = await _repository.sendMessage(
-          SendChatMessageRequest(receiverUsername: peerUsername, text: t),
+          SendChatMessageRequest(receiverUsername: peerUsername, text: outbound),
         );
         if (m.conversationId != null) {
           _conversationId = m.conversationId;
@@ -194,6 +216,7 @@ class ChatProvider extends ChangeNotifier {
           (a, b) => (a.createdAt ?? '').compareTo(b.createdAt ?? ''),
         );
       }
+      _clearActiveReply();
       notifyListeners();
       return null;
     } catch (e) {
@@ -202,6 +225,12 @@ class ChatProvider extends ChangeNotifier {
       sending = false;
       notifyListeners();
     }
+  }
+
+  void _clearActiveReply() {
+    activeReplyContentId = null;
+    activeReplyFileUrl = null;
+    activeReplyLabel = null;
   }
 
   @override
