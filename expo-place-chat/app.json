@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "BilDunya Place Chat",
+    "slug": "expo-place-chat",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.bildunya.placechat"
+    },
+    "android": {
+      "package": "com.bildunya.placechat"
+    }
+  }
+}
