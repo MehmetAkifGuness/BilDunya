@@ -26,6 +26,9 @@ public class ConversationSummaryDto {
     @JsonProperty("last_message")
     private String lastMessage;
 
+    @JsonProperty("last_message_sender_username")
+    private String lastMessageSenderUsername;
+
     @JsonProperty("last_message_at")
     private String lastMessageAt;
 

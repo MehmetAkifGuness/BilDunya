@@ -43,14 +43,16 @@ class _MainShellState extends State<MainShell> {
           ProfileView(),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        elevation: 4,
-        backgroundColor: AppColors.primaryContainer,
-        foregroundColor: AppColors.onPrimary,
-        tooltip: 'Paylaşım oluştur',
-        onPressed: () => _openCreateContent(context),
-        child: const Icon(Symbols.add, size: 28),
-      ),
+      floatingActionButton: _index == 3
+          ? null
+          : FloatingActionButton(
+              elevation: 4,
+              backgroundColor: AppColors.primaryContainer,
+              foregroundColor: AppColors.onPrimary,
+              tooltip: 'Paylaşım oluştur',
+              onPressed: () => _openCreateContent(context),
+              child: const Icon(Symbols.add, size: 28),
+            ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: NavigationBar(
         backgroundColor: AppColors.surfaceContainer,

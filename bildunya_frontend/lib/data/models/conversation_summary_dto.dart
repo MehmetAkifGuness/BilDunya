@@ -6,6 +6,7 @@ class ConversationSummaryDto {
     this.otherUsername,
     this.otherFullName,
     this.lastMessage,
+    this.lastMessageSenderUsername,
     this.lastMessageAt,
     this.unreadCount,
     this.relatedContentId,
@@ -17,6 +18,7 @@ class ConversationSummaryDto {
   final String? otherUsername;
   final String? otherFullName;
   final String? lastMessage;
+  final String? lastMessageSenderUsername;
   final String? lastMessageAt;
   final int? unreadCount;
   final int? relatedContentId;
@@ -33,6 +35,9 @@ class ConversationSummaryDto {
           json['otherFullName'] as String?,
       lastMessage:
           json['last_message'] as String? ?? json['lastMessage'] as String?,
+      lastMessageSenderUsername:
+          json['last_message_sender_username'] as String? ??
+              json['lastMessageSenderUsername'] as String?,
       lastMessageAt: json['last_message_at'] as String? ??
           json['lastMessageAt'] as String?,
       unreadCount: (json['unread_count'] as num?)?.toInt() ??
