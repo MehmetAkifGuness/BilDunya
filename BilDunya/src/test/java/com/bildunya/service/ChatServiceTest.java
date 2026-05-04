@@ -231,16 +231,22 @@ class ChatServiceTest {
                     public String getRelatedContentLabel() {
                         return "Kapadokya";
                     }
-
-                    @Override
-                    public String getLastMessageSenderUsername() {
-                        return "other";
-                    }
                 };
 
         PageRequest pageable = PageRequest.of(0, 50);
         when(chatConversationRepository.findConversationSummaries(9L, pageable))
                 .thenReturn(new PageImpl<>(List.of(proj), pageable, 1));
+        User other = User.builder().username("other").build();
+        other.setId(200L);
+        ChatMessage lastMessage = ChatMessage.builder()
+                .sender(other)
+                .text("hi")
+                .build();
+        lastMessage.setCreatedAt(lastAt);
+        when(chatMessageRepository.findFirstByConversation_IdAndIsDeletedFalseOrderByCreatedAtDesc(100L))
+                .thenReturn(Optional.of(lastMessage));
+        when(chatMessageRepository.countByConversation_IdAndReceiver_IdAndIsReadFalseAndIsDeletedFalse(100L, 9L))
+                .thenReturn(3L);
 
         Page<ConversationSummaryDto> page = service.getConversations("me", pageable);
 
@@ -251,6 +257,7 @@ class ChatServiceTest {
         assertEquals("other", dto.getOtherUsername());
         assertEquals("Other User", dto.getOtherFullName());
         assertEquals("hi", dto.getLastMessage());
+        assertEquals("other", dto.getLastMessageSenderUsername());
         assertEquals("2026-05-04T12:30:15", dto.getLastMessageAt());
         assertEquals(3L, dto.getUnreadCount());
         assertEquals(500L, dto.getRelatedContentId());

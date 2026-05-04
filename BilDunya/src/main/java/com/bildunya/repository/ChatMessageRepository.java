@@ -9,6 +9,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
 
@@ -18,6 +20,10 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     Page<ChatMessage> findByConversationId(
             @Param("conversationId") Long conversationId,
             Pageable pageable);
+
+    Optional<ChatMessage> findFirstByConversation_IdAndIsDeletedFalseOrderByCreatedAtDesc(Long conversationId);
+
+    long countByConversation_IdAndReceiver_IdAndIsReadFalseAndIsDeletedFalse(Long conversationId, Long receiverId);
 
     @Modifying
     @Query(

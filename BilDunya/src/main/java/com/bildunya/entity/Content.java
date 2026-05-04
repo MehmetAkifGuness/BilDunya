@@ -50,8 +50,9 @@ public class Content extends BaseEntity {
     @Column(name = "is_verified", nullable = false)
     private Boolean isVerified = false;
 
-    @Column(name = "verification_status")
-    private String verificationStatus; // PENDING, VERIFIED, REJECTED
+    @Builder.Default
+    @Column(name = "verification_status", nullable = false, columnDefinition = "varchar(255) default 'PENDING'")
+    private String verificationStatus = "PENDING"; // PENDING, APPROVED, REJECTED
 
     @Column(name = "rejection_reason", columnDefinition = "TEXT")
     private String rejectionReason;
@@ -64,4 +65,11 @@ public class Content extends BaseEntity {
 
     @Column(name = "tags", columnDefinition = "TEXT")
     private String tags; // Comma-separated
+
+    @PrePersist
+    void ensureVerificationStatus() {
+        if (verificationStatus == null || verificationStatus.isBlank()) {
+            verificationStatus = "PENDING";
+        }
+    }
 }

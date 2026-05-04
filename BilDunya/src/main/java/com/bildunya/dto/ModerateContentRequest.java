@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 public class ModerateContentRequest {
 
     @NotBlank(message = "verificationStatus is required")
-    private String verificationStatus; // VERIFIED, REJECTED
+    private String verificationStatus; // APPROVED, REJECTED
 
     @Size(max = 500, message = "rejectionReason must be at most 500 characters")
     private String rejectionReason;

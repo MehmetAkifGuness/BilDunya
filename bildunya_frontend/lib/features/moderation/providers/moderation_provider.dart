@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../data/models/content_dto.dart';
-import '../../../data/models/moderate_content_request.dart';
 import '../../../data/repositories/content_repository.dart';
 
 class ModerationProvider extends ChangeNotifier {
@@ -10,7 +9,7 @@ class ModerationProvider extends ChangeNotifier {
   static const List<String> supportedStatuses = <String>[
     'PENDING',
     'REJECTED',
-    'VERIFIED',
+    'APPROVED',
   ];
 
   final ContentRepository _repository;
@@ -44,33 +43,31 @@ class ModerationProvider extends ChangeNotifier {
   }
 
   Future<String?> approve(int contentId) async {
-    return _moderate(contentId: contentId, verificationStatus: 'VERIFIED');
-  }
-
-  Future<String?> reject(int contentId, {String? rejectionReason}) async {
-    return _moderate(
-      contentId: contentId,
-      verificationStatus: 'REJECTED',
-      rejectionReason: rejectionReason,
-    );
-  }
-
-  Future<String?> _moderate({
-    required int contentId,
-    required String verificationStatus,
-    String? rejectionReason,
-  }) async {
     if (acting) return null;
 
     acting = true;
     notifyListeners();
     try {
-      await _repository.moderateContent(
+      await _repository.approveContent(contentId: contentId);
+      await loadQueue(status: selectedStatus);
+      return null;
+    } catch (e) {
+      return e.toString();
+    } finally {
+      acting = false;
+      notifyListeners();
+    }
+  }
+
+  Future<String?> reject(int contentId, {String? rejectionReason}) async {
+    if (acting) return null;
+
+    acting = true;
+    notifyListeners();
+    try {
+      await _repository.rejectContent(
         contentId: contentId,
-        request: ModerateContentRequest(
-          verificationStatus: verificationStatus,
-          rejectionReason: rejectionReason,
-        ),
+        rejectionReason: rejectionReason,
       );
       await loadQueue(status: selectedStatus);
       return null;

@@ -159,13 +159,17 @@ class ContentRepository {
     int size = 20,
   }) async {
     try {
+      final status = verificationStatus.trim().toUpperCase();
+      final path = status == 'PENDING'
+          ? '/moderation/pending'
+          : '/contents/moderation/queue';
+      final query = <String, dynamic>{'page': page, 'size': size};
+      if (status != 'PENDING') {
+        query['verificationStatus'] = status;
+      }
       final res = await _dio.get<Map<String, dynamic>>(
-        '/contents/moderation/queue',
-        queryParameters: {
-          'verificationStatus': verificationStatus,
-          'page': page,
-          'size': size,
-        },
+        path,
+        queryParameters: query,
       );
       final body = res.data;
       if (body == null) throw Exception('Boş yanıt');
@@ -183,6 +187,36 @@ class ContentRepository {
       final res = await _dio.patch<Map<String, dynamic>>(
         '/contents/$contentId/moderation',
         data: request.toJson(),
+      );
+      final body = res.data;
+      if (body == null) throw Exception('Boş yanıt');
+      return ContentDto.fromJson(body);
+    } on DioException catch (e) {
+      throw Exception(dioErrorMessage(e));
+    }
+  }
+
+  Future<ContentDto> approveContent({required int contentId}) async {
+    try {
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/moderation/$contentId/approve',
+      );
+      final body = res.data;
+      if (body == null) throw Exception('Boş yanıt');
+      return ContentDto.fromJson(body);
+    } on DioException catch (e) {
+      throw Exception(dioErrorMessage(e));
+    }
+  }
+
+  Future<ContentDto> rejectContent({
+    required int contentId,
+    String? rejectionReason,
+  }) async {
+    try {
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/moderation/$contentId/reject',
+        data: {'rejectionReason': ?rejectionReason},
       );
       final body = res.data;
       if (body == null) throw Exception('Boş yanıt');

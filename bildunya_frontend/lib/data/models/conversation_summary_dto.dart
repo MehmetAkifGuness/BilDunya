@@ -28,23 +28,33 @@ class ConversationSummaryDto {
     return ConversationSummaryDto(
       id: _toInt(json['id']),
       otherUserId: _toInt(json['other_user_id']) ?? _toInt(json['otherUserId']),
-      otherUsername: json['other_username'] as String? ??
-          json['otherUsername'] as String?,
-      otherFullName: json['other_full_name'] as String? ??
-          json['otherFullName'] as String?,
+      otherUsername:
+          _toString(json['other_username']) ?? _toString(json['otherUsername']),
+      otherFullName:
+          _toString(json['other_full_name']) ??
+          _toString(json['otherFullName']),
       lastMessage:
-          json['last_message'] as String? ?? json['lastMessage'] as String?,
+          _toString(json['last_message']) ?? _toString(json['lastMessage']),
       lastMessageSenderUsername:
-          json['last_message_sender_username'] as String? ??
-              json['lastMessageSenderUsername'] as String?,
-      lastMessageAt: json['last_message_at'] as String? ??
-          json['lastMessageAt'] as String?,
+          _toString(json['last_message_sender_username']) ??
+          _toString(json['lastMessageSenderUsername']),
+      lastMessageAt:
+          _toString(json['last_message_at']) ??
+          _toString(json['lastMessageAt']),
       unreadCount: _toInt(json['unread_count']) ?? _toInt(json['unreadCount']),
-      relatedContentId: _toInt(json['related_content_id']) ??
+      relatedContentId:
+          _toInt(json['related_content_id']) ??
           _toInt(json['relatedContentId']),
-      relatedContentLabel: json['related_content_label'] as String? ??
-          json['relatedContentLabel'] as String?,
+      relatedContentLabel:
+          _toString(json['related_content_label']) ??
+          _toString(json['relatedContentLabel']),
     );
+  }
+
+  static String? _toString(dynamic v) {
+    if (v == null) return null;
+    final text = v.toString();
+    return text.trim().isEmpty ? null : text;
   }
 
   static int? _toInt(dynamic v) {
@@ -55,4 +65,3 @@ class ConversationSummaryDto {
     return null;
   }
 }
-

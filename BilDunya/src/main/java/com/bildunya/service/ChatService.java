@@ -63,6 +63,7 @@ public class ChatService {
                 .build();
 
         message = chatMessageRepository.save(message);
+        chatConversationRepository.touchConversation(conversation.getId());
         ChatMessageDto dto = mapToDto(message);
 
         messagingTemplate.convertAndSend("/topic/chat/" + receiver.getUsername(), dto);
@@ -107,14 +108,40 @@ public class ChatService {
                         .otherUserId(toLongOrNull(p.getOtherUserId()))
                         .otherUsername(p.getOtherUsername())
                         .otherFullName(p.getOtherFullName())
-                        .lastMessage(p.getLastMessageText())
-                        .lastMessageSenderUsername(p.getLastMessageSenderUsername())
-                        .lastMessageAt(formatTemporalOrNull(p.getLastMessageCreatedAt(), formatter))
-                        .unreadCount(toLongOrDefault(p.getUnreadCount(), 0L))
+                        .lastMessage(null)
+                        .lastMessageSenderUsername(null)
+                        .lastMessageAt(null)
+                        .unreadCount(0L)
                         .relatedContentId(toLongOrNull(p.getRelatedContentId()))
                         .relatedContentLabel(trimToNull(p.getRelatedContentLabel()))
                         .build());
+        page.forEach(dto -> enrichConversationSummary(dto, user.getId(), formatter));
         return page;
+    }
+
+    private void enrichConversationSummary(
+            ConversationSummaryDto dto,
+            Long currentUserId,
+            DateTimeFormatter formatter) {
+
+        if (dto == null || dto.getId() == null) {
+            return;
+        }
+
+        chatMessageRepository
+                .findFirstByConversation_IdAndIsDeletedFalseOrderByCreatedAtDesc(dto.getId())
+                .ifPresent(message -> {
+                    dto.setLastMessage(message.getText());
+                    dto.setLastMessageAt(formatOrNull(message.getCreatedAt(), formatter));
+                    if (message.getSender() != null) {
+                        dto.setLastMessageSenderUsername(message.getSender().getUsername());
+                    }
+                });
+
+        if (currentUserId != null) {
+            dto.setUnreadCount(chatMessageRepository
+                    .countByConversation_IdAndReceiver_IdAndIsReadFalseAndIsDeletedFalse(dto.getId(), currentUserId));
+        }
     }
 
     public ConversationDto openConversation(String username, CreateConversationRequest request) {
@@ -194,6 +221,7 @@ public class ChatService {
                 .build();
 
         message = chatMessageRepository.save(message);
+        chatConversationRepository.touchConversation(conversation.getId());
         ChatMessageDto dto = mapToDto(message);
 
         messagingTemplate.convertAndSend("/topic/chat/" + receiver.getUsername(), dto);

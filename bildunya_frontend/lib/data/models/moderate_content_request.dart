@@ -5,7 +5,7 @@ class ModerateContentRequest {
     this.rejectionReason,
   });
 
-  final String verificationStatus; // VERIFIED, REJECTED
+  final String verificationStatus; // APPROVED, REJECTED
   final String? rejectionReason;
 
   Map<String, dynamic> toJson() => {

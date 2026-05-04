@@ -26,7 +26,9 @@ import 'widgets/create_custom_location_sheet.dart';
 import 'widgets/create_content_pin_sheet.dart';
 
 enum _MapChip { none, historic, nature }
+
 enum _PinLayer { all, popular, custom }
+
 enum _CreatePinKind { location, photo }
 
 sealed class _MapPin {
@@ -51,8 +53,9 @@ final class _ContentPin extends _MapPin {
   LatLng get point => LatLng(content.latitude!, content.longitude!);
 
   @override
-  String get title =>
-      content.locationName?.trim().isNotEmpty == true ? content.locationName!.trim() : 'Keşif';
+  String get title => content.locationName?.trim().isNotEmpty == true
+      ? content.locationName!.trim()
+      : 'Keşif';
 
   @override
   String get subtitle {
@@ -99,8 +102,9 @@ final class _CustomPin extends _MapPin {
   LatLng get point => LatLng(location.latitude!, location.longitude!);
 
   @override
-  String get title =>
-      (location.name ?? 'Konum').trim().isEmpty ? 'Konum' : location.name!.trim();
+  String get title => (location.name ?? 'Konum').trim().isEmpty
+      ? 'Konum'
+      : location.name!.trim();
 
   @override
   String get subtitle {
@@ -461,14 +465,18 @@ class _MapViewState extends State<MapView> {
       pins.addAll(contents.map(_ContentPin.new));
       pins.addAll(popularLocations.map(_PopularPin.new));
       final custom = _customLocations.nearby
-          .where((c) => c.latitude != null && c.longitude != null && c.id != null)
+          .where(
+            (c) => c.latitude != null && c.longitude != null && c.id != null,
+          )
           .toList();
       pins.addAll(custom.map(_CustomPin.new));
     } else if (_layer == _PinLayer.popular) {
       pins.addAll(popularLocations.map(_PopularPin.new));
     } else {
       final custom = _customLocations.nearby
-          .where((c) => c.latitude != null && c.longitude != null && c.id != null)
+          .where(
+            (c) => c.latitude != null && c.longitude != null && c.id != null,
+          )
           .toList();
       pins.addAll(custom.map(_CustomPin.new));
     }
@@ -498,9 +506,7 @@ class _MapViewState extends State<MapView> {
       useSafeArea: true,
       backgroundColor: AppColors.surfaceContainer,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppRadii.lg),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.lg)),
       ),
       showDragHandle: true,
       builder: (context) {
@@ -515,7 +521,8 @@ class _MapViewState extends State<MapView> {
                   leading: const Icon(Symbols.place),
                   title: const Text('Pin (mekan) oluştur'),
                   subtitle: const Text('Ad + açıklama, opsiyonel fotoğraf'),
-                  onTap: () => Navigator.of(context).pop(_CreatePinKind.location),
+                  onTap: () =>
+                      Navigator.of(context).pop(_CreatePinKind.location),
                 ),
                 ListTile(
                   leading: const Icon(Symbols.add_a_photo),
@@ -544,9 +551,7 @@ class _MapViewState extends State<MapView> {
       useSafeArea: true,
       backgroundColor: AppColors.surfaceContainer,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppRadii.lg),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.lg)),
       ),
       builder: (context) => kind == _CreatePinKind.location
           ? CreateCustomLocationSheet(point: point)
@@ -625,13 +630,15 @@ class _MapViewState extends State<MapView> {
             button: true,
             label: _pinSemanticsLabel(pin),
             hint: 'Detayları görmek için dokunun.',
-                child: GestureDetector(
+            child: GestureDetector(
               onTap: () => _selectPin(pin),
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: _selected?.key == pin.key
+                  color: pin is _CustomPin
                       ? AppColors.primaryContainer
-                      : AppColors.surfaceContainer,
+                      : (_selected?.key == pin.key
+                            ? AppColors.primaryContainer
+                            : AppColors.surfaceContainer),
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: AppColors.surfaceContainerLowest,
@@ -646,15 +653,13 @@ class _MapViewState extends State<MapView> {
                   ],
                 ),
                 child: Icon(
-                  pin is _PopularPin || pin is _CustomPin
-                      ? Symbols.star
-                      : Symbols.location_on,
+                  pin is _CustomPin ? Symbols.star : Symbols.location_on,
                   size: 26,
-                  color: _selected?.key == pin.key
+                  color: pin is _CustomPin
                       ? AppColors.onPrimary
-                      : (pin is _PopularPin || pin is _CustomPin
-                          ? AppColors.tertiary
-                          : AppColors.primaryContainer),
+                      : (_selected?.key == pin.key
+                            ? AppColors.onPrimary
+                            : AppColors.primaryContainer),
                 ),
               ),
             ),
@@ -669,10 +674,7 @@ class _MapViewState extends State<MapView> {
             decoration: BoxDecoration(
               color: AppColors.surfaceContainer,
               shape: BoxShape.circle,
-              border: Border.all(
-                color: AppColors.primaryContainer,
-                width: 3,
-              ),
+              border: Border.all(color: AppColors.primaryContainer, width: 3),
               boxShadow: const [
                 BoxShadow(
                   blurRadius: 10,
@@ -778,7 +780,9 @@ class _MapViewState extends State<MapView> {
                       Padding(
                         padding: const EdgeInsets.only(bottom: 8),
                         child: Material(
-                          color: AppColors.primaryContainer.withValues(alpha: 0.35),
+                          color: AppColors.primaryContainer.withValues(
+                            alpha: 0.35,
+                          ),
                           borderRadius: BorderRadius.circular(12),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
@@ -872,10 +876,12 @@ class _MapViewState extends State<MapView> {
               relatedLoading: _selected == null
                   ? false
                   : _pinImageLoading.contains(_selected!.key),
-              relatedError:
-                  _selected == null ? null : _pinImageError[_selected!.key],
-              onOpenDetail:
-                  _selected is _ContentPin ? () => _openDetail(_selected! as _ContentPin) : null,
+              relatedError: _selected == null
+                  ? null
+                  : _pinImageError[_selected!.key],
+              onOpenDetail: _selected is _ContentPin
+                  ? () => _openDetail(_selected! as _ContentPin)
+                  : null,
               onExplore: _selected == null
                   ? null
                   : () => _openExploreGallery(_selected!),
@@ -1054,8 +1060,9 @@ class _BottomPreviewCard extends StatelessWidget {
     final url = p.imageUrl;
     final isContent = p is _ContentPin;
     final related = relatedImageUrls;
-    final previewImageUrl =
-        url.isNotEmpty ? url : (related.isNotEmpty ? related.first : '');
+    final previewImageUrl = url.isNotEmpty
+        ? url
+        : (related.isNotEmpty ? related.first : '');
 
     return Material(
       elevation: 10,
@@ -1085,8 +1092,9 @@ class _BottomPreviewCard extends StatelessWidget {
                               child: SizedBox(
                                 width: 20,
                                 height: 20,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               ),
                             ),
                           ),
@@ -1143,7 +1151,9 @@ class _BottomPreviewCard extends StatelessWidget {
                       child: Text(
                         p is _PopularPin
                             ? 'Sistem konumu'
-                            : (p is _CustomPin ? 'Özel pin' : 'Kullanıcı konumu'),
+                            : (p is _CustomPin
+                                  ? 'Özel pin'
+                                  : 'Kullanıcı konumu'),
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: AppColors.secondary.withValues(alpha: 0.85),
                           fontWeight: FontWeight.w700,
@@ -1228,17 +1238,17 @@ class _BottomPreviewCard extends StatelessWidget {
                                 ),
                                 errorWidget: (context, url, error) =>
                                     const SizedBox(
-                                  width: 44,
-                                  height: 44,
-                                  child: ColoredBox(
-                                    color: AppColors.surfaceVariant,
-                                    child: Icon(
-                                      Symbols.broken_image,
-                                      color: AppColors.secondary,
-                                      size: 18,
+                                      width: 44,
+                                      height: 44,
+                                      child: ColoredBox(
+                                        color: AppColors.surfaceVariant,
+                                        child: Icon(
+                                          Symbols.broken_image,
+                                          color: AppColors.secondary,
+                                          size: 18,
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                ),
                               ),
                             ),
                           );
@@ -1360,11 +1370,7 @@ class _CustomPinPreviewCardState extends State<_CustomPinPreviewCard> {
       showAppSnackBar(context, 'Fotoğraflar eklendi.');
     } catch (e) {
       if (!mounted) return;
-      showAppSnackBar(
-        context,
-        userFriendlyErrorMessage(e),
-        isError: true,
-      );
+      showAppSnackBar(context, userFriendlyErrorMessage(e), isError: true);
     }
   }
 
@@ -1374,7 +1380,8 @@ class _CustomPinPreviewCardState extends State<_CustomPinPreviewCard> {
     final photos = _photos;
     final auth = context.watch<AuthProvider>();
     final myId = auth.user?.id;
-    final isOwner = auth.isAuthenticated &&
+    final isOwner =
+        auth.isAuthenticated &&
         myId != null &&
         widget.location.userId != null &&
         myId == widget.location.userId;
@@ -1440,7 +1447,8 @@ class _CustomPinPreviewCardState extends State<_CustomPinPreviewCard> {
                     if (isOwner)
                       IconButton(
                         tooltip: 'Fotoğraf ekle',
-                        onPressed: context.watch<CustomLocationsProvider>().creating
+                        onPressed:
+                            context.watch<CustomLocationsProvider>().creating
                             ? null
                             : _addPhotos,
                         icon: const Icon(Symbols.add_a_photo),
@@ -1486,20 +1494,23 @@ class _CustomPinPreviewCardState extends State<_CustomPinPreviewCard> {
                               child: SizedBox(
                                 width: 28,
                                 height: 28,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               ),
                             ),
                           ),
-                          errorWidget: (context, url, error) => const ColoredBox(
-                            color: AppColors.surfaceVariant,
-                            child: Center(
-                              child: Icon(
-                                Symbols.broken_image,
-                                color: AppColors.secondary,
-                                size: 28,
+                          errorWidget: (context, url, error) =>
+                              const ColoredBox(
+                                color: AppColors.surfaceVariant,
+                                child: Center(
+                                  child: Icon(
+                                    Symbols.broken_image,
+                                    color: AppColors.secondary,
+                                    size: 28,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
                         ),
                       );
                     },
@@ -1574,20 +1585,23 @@ class _CustomPinPreviewCardState extends State<_CustomPinPreviewCard> {
                                   child: SizedBox(
                                     width: 18,
                                     height: 18,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
                                   ),
                                 ),
                               ),
-                              errorWidget: (context, url, error) => const ColoredBox(
-                                color: AppColors.surfaceVariant,
-                                child: Center(
-                                  child: Icon(
-                                    Symbols.image_not_supported,
-                                    color: AppColors.secondary,
-                                    size: 18,
+                              errorWidget: (context, url, error) =>
+                                  const ColoredBox(
+                                    color: AppColors.surfaceVariant,
+                                    child: Center(
+                                      child: Icon(
+                                        Symbols.image_not_supported,
+                                        color: AppColors.secondary,
+                                        size: 18,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
                             ),
                           ),
                         ),

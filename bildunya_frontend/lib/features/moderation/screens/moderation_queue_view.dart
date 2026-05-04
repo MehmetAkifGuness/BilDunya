@@ -308,7 +308,7 @@ class _StatusChip extends StatelessWidget {
     final normalized = (status ?? '').trim().toUpperCase();
     Color color;
     String text;
-    if (normalized == 'VERIFIED') {
+    if (normalized == 'APPROVED') {
       color = AppColors.primaryContainer;
       text = 'ONAY';
     } else if (normalized == 'REJECTED') {

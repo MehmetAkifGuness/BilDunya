@@ -32,6 +32,9 @@ public class CustomLocationDto {
 
     private List<String> tags;
 
+    @JsonProperty("verification_status")
+    private String verificationStatus;
+
     @JsonProperty("created_at")
     private String createdAt;
 }

@@ -22,9 +22,13 @@ class PagedConversationResult {
     if (raw is List) {
       for (final e in raw) {
         if (e is Map) {
-          list.add(
-            ConversationSummaryDto.fromJson(Map<String, dynamic>.from(e)),
-          );
+          try {
+            list.add(
+              ConversationSummaryDto.fromJson(Map<String, dynamic>.from(e)),
+            );
+          } catch (_) {
+            // A malformed row should not take the whole inbox down.
+          }
         }
       }
     }
@@ -37,4 +41,3 @@ class PagedConversationResult {
     );
   }
 }
-

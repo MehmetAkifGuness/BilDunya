@@ -6,6 +6,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -23,7 +24,8 @@ import java.util.List;
         @Index(name = "idx_custom_location_user_id", columnList = "user_id"),
         @Index(name = "idx_custom_location_latitude_longitude", columnList = "latitude,longitude"),
         @Index(name = "idx_custom_location_created_at", columnList = "created_at"),
-        @Index(name = "idx_custom_location_deleted_created", columnList = "is_deleted,created_at")
+        @Index(name = "idx_custom_location_deleted_created", columnList = "is_deleted,created_at"),
+        @Index(name = "idx_custom_location_verification_status", columnList = "verification_status")
 })
 @Data
 @NoArgsConstructor
@@ -60,4 +62,15 @@ public class CustomLocation extends BaseEntity {
     @JdbcTypeCode(SqlTypes.JSON)
     @Builder.Default
     private List<String> tags = new ArrayList<>();
+
+    @Builder.Default
+    @Column(name = "verification_status", nullable = false, columnDefinition = "varchar(255) default 'PENDING'")
+    private String verificationStatus = "PENDING";
+
+    @PrePersist
+    void ensureVerificationStatus() {
+        if (verificationStatus == null || verificationStatus.isBlank()) {
+            verificationStatus = "PENDING";
+        }
+    }
 }

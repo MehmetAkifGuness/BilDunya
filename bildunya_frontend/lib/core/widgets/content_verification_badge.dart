@@ -19,7 +19,10 @@ class ContentVerificationBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final normalizedStatus = (verificationStatus ?? '').trim().toUpperCase();
-    final verified = isVerified == true || normalizedStatus == 'VERIFIED';
+    final verified =
+        isVerified == true ||
+        normalizedStatus == 'APPROVED' ||
+        normalizedStatus == 'VERIFIED';
 
     if (verified) {
       return _BadgePill(

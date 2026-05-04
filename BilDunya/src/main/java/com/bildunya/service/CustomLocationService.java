@@ -38,6 +38,7 @@ public class CustomLocationService {
     private static final int MAX_TAGS = 25;
     private static final int MAX_PHOTOS_TOTAL = 20;
     private static final int MAX_PHOTOS_PER_REQUEST = 10;
+    private static final String VERIFICATION_PENDING = "PENDING";
 
     private final CustomLocationRepository customLocationRepository;
     private final UserRepository userRepository;
@@ -223,6 +224,7 @@ public class CustomLocationService {
                 .imageUrl(trimToNull(imageUrl))
                 .photoUrls(photoUrls)
                 .tags(normalizeTags(request.getTags()))
+                .verificationStatus(VERIFICATION_PENDING)
                 .build();
         loc.setIsDeleted(false);
 
@@ -280,6 +282,7 @@ public class CustomLocationService {
                 .imageUrl(loc.getImageUrl())
                 .photoUrls(loc.getPhotoUrls() != null ? loc.getPhotoUrls() : List.of())
                 .tags(loc.getTags() != null ? loc.getTags() : List.of())
+                .verificationStatus(loc.getVerificationStatus())
                 .createdAt(loc.getCreatedAt() != null ? loc.getCreatedAt().format(formatter) : null)
                 .build();
     }

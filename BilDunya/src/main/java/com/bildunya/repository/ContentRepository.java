@@ -16,15 +16,14 @@ public interface ContentRepository extends JpaRepository<Content, Long> {
 
     Page<Content> findByUser(User user, Pageable pageable);
 
-    Page<Content> findByIsDeletedFalse(Pageable pageable);
+    Page<Content> findByIsDeletedFalseAndVerificationStatus(String verificationStatus, Pageable pageable);
 
     Page<Content> findByVerificationStatusAndIsDeletedFalse(String verificationStatus, Pageable pageable);
-
-    Page<Content> findByIsDeletedFalseAndVerificationStatusNot(String verificationStatus, Pageable pageable);
 
     @Query(value = "SELECT * FROM contents c " +
             "WHERE c.is_deleted = false AND " +
             "c.latitude BETWEEN :minLat AND :maxLat AND " +
+            "c.verification_status = 'APPROVED' AND " +
             "( " +
             "(:wrapsLon = false AND c.longitude BETWEEN :minLon AND :maxLon) OR " +
             "(:wrapsLon = true AND (c.longitude >= :minLon OR c.longitude <= :maxLon)) " +
@@ -35,6 +34,7 @@ public interface ContentRepository extends JpaRepository<Content, Long> {
             ", -1), 1))) <= :radiusKm",
             countQuery = "SELECT count(*) FROM contents c " +
                     "WHERE c.is_deleted = false AND " +
+                    "c.verification_status = 'APPROVED' AND " +
                     "c.latitude BETWEEN :minLat AND :maxLat AND " +
                     "( " +
                     "(:wrapsLon = false AND c.longitude BETWEEN :minLon AND :maxLon) OR " +
@@ -55,8 +55,8 @@ public interface ContentRepository extends JpaRepository<Content, Long> {
                                      @Param("wrapsLon") Boolean wrapsLon,
                                      Pageable pageable);
 
-    @Query("SELECT c FROM Content c WHERE c.isDeleted = false AND c.verificationStatus = 'VERIFIED'")
-    Page<Content> findVerifiedContent(Pageable pageable);
+    @Query("SELECT c FROM Content c WHERE c.isDeleted = false AND c.verificationStatus = 'APPROVED'")
+    Page<Content> findApprovedContent(Pageable pageable);
 
     List<Content> findByVerificationStatus(String verificationStatus);
 

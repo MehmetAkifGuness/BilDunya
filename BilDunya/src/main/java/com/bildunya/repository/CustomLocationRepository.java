@@ -14,6 +14,7 @@ public interface CustomLocationRepository extends JpaRepository<CustomLocation, 
 
     @Query(value = "SELECT * FROM custom_locations l " +
             "WHERE l.is_deleted = false AND " +
+            "l.verification_status = 'APPROVED' AND " +
             "l.latitude BETWEEN :minLat AND :maxLat AND " +
             "( " +
             "(:wrapsLon = false AND l.longitude BETWEEN :minLon AND :maxLon) OR " +
@@ -26,6 +27,7 @@ public interface CustomLocationRepository extends JpaRepository<CustomLocation, 
             "ORDER BY l.created_at DESC",
             countQuery = "SELECT count(*) FROM custom_locations l " +
                     "WHERE l.is_deleted = false AND " +
+                    "l.verification_status = 'APPROVED' AND " +
                     "l.latitude BETWEEN :minLat AND :maxLat AND " +
                     "( " +
                     "(:wrapsLon = false AND l.longitude BETWEEN :minLon AND :maxLon) OR " +
@@ -48,6 +50,7 @@ public interface CustomLocationRepository extends JpaRepository<CustomLocation, 
 
     @Query(value = "SELECT * FROM custom_locations l " +
             "WHERE l.is_deleted = false AND l.user_id = :userId AND " +
+            "l.verification_status = 'APPROVED' AND " +
             "l.latitude BETWEEN :minLat AND :maxLat AND " +
             "( " +
             "(:wrapsLon = false AND l.longitude BETWEEN :minLon AND :maxLon) OR " +
@@ -60,6 +63,7 @@ public interface CustomLocationRepository extends JpaRepository<CustomLocation, 
             "ORDER BY l.created_at DESC",
             countQuery = "SELECT count(*) FROM custom_locations l " +
                     "WHERE l.is_deleted = false AND l.user_id = :userId AND " +
+                    "l.verification_status = 'APPROVED' AND " +
                     "l.latitude BETWEEN :minLat AND :maxLat AND " +
                     "( " +
                     "(:wrapsLon = false AND l.longitude BETWEEN :minLon AND :maxLon) OR " +
@@ -81,5 +85,5 @@ public interface CustomLocationRepository extends JpaRepository<CustomLocation, 
                                                          @Param("wrapsLon") Boolean wrapsLon,
                                                          Pageable pageable);
 
-    Page<CustomLocation> findByUserAndIsDeletedFalse(User user, Pageable pageable);
+    Page<CustomLocation> findByUserAndIsDeletedFalseAndVerificationStatus(User user, String verificationStatus, Pageable pageable);
 }

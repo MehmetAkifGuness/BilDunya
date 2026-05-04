@@ -43,7 +43,7 @@ public class ContentService {
 
     private static final double AUTO_VERIFY_DISTANCE_KM = 0.5;
     private static final String VERIFICATION_PENDING = "PENDING";
-    private static final String VERIFICATION_VERIFIED = "VERIFIED";
+    private static final String VERIFICATION_APPROVED = "APPROVED";
     private static final String VERIFICATION_REJECTED = "REJECTED";
     private static final String REJECTION_EXIF_LOCATION_MISMATCH = "EXIF_LOCATION_MISMATCH";
     private static final String REJECTION_MANUAL_MODERATOR = "MANUAL_MODERATOR_REJECTION";
@@ -51,9 +51,9 @@ public class ContentService {
     private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of("IMAGE", "VIDEO", "TEXT");
     private static final Set<String> ALLOWED_SHARE_TYPES = Set.of("PUBLIC", "PRIVATE", "ANONYMOUS");
     private static final Set<String> ALLOWED_VERIFICATION_STATUSES =
-            Set.of(VERIFICATION_PENDING, VERIFICATION_VERIFIED, VERIFICATION_REJECTED);
+            Set.of(VERIFICATION_PENDING, VERIFICATION_APPROVED, VERIFICATION_REJECTED);
     private static final Set<String> ALLOWED_MODERATION_DECISIONS =
-            Set.of(VERIFICATION_VERIFIED, VERIFICATION_REJECTED);
+            Set.of(VERIFICATION_APPROVED, VERIFICATION_REJECTED);
     private static final Set<String> MODERATOR_ROLES = Set.of("ADMIN", "MODERATOR");
 
     private static final int MAX_DESCRIPTION_LENGTH = 2000;
@@ -191,7 +191,7 @@ public class ContentService {
             value = "verifiedContent",
             key = "'v:' + #pageable.pageNumber + ':' + #pageable.pageSize + ':' + #pageable.sort.toString()")
     public Page<ContentDto> getVerifiedContent(Pageable pageable) {
-        return contentRepository.findVerifiedContent(pageable)
+        return contentRepository.findApprovedContent(pageable)
                 .map(this::mapToContentDto);
     }
 
@@ -210,7 +210,7 @@ public class ContentService {
         List<String> keywords = parsePreferenceKeywords(user.getLocationPreferences());
         if (keywords.isEmpty()) {
             return contentRepository
-                    .findByIsDeletedFalseAndVerificationStatusNot(VERIFICATION_REJECTED, pageable)
+                    .findByIsDeletedFalseAndVerificationStatus(VERIFICATION_APPROVED, pageable)
                     .map(this::mapToContentDto);
         }
 
@@ -221,7 +221,7 @@ public class ContentService {
         Pageable expandedPageable = PageRequest.of(pageable.getPageNumber(), expandedSize, sort);
 
         Page<Content> source = contentRepository
-                .findByIsDeletedFalseAndVerificationStatusNot(VERIFICATION_REJECTED, expandedPageable);
+                .findByIsDeletedFalseAndVerificationStatus(VERIFICATION_APPROVED, expandedPageable);
 
         List<ScoredContent> scored = new ArrayList<>();
         for (Content content : source.getContent()) {
@@ -295,9 +295,9 @@ public class ContentService {
             throw new ResourceNotFoundException("Content not found");
         }
 
-        if (VERIFICATION_VERIFIED.equals(decision)) {
+        if (VERIFICATION_APPROVED.equals(decision)) {
             content.setIsVerified(true);
-            content.setVerificationStatus(VERIFICATION_VERIFIED);
+            content.setVerificationStatus(VERIFICATION_APPROVED);
             content.setRejectionReason(null);
         } else {
             content.setIsVerified(false);
@@ -511,6 +511,9 @@ public class ContentService {
             throw new IllegalArgumentException(fieldName + " is required");
         }
         String normalized = raw.trim().toUpperCase();
+        if ("verificationStatus".equals(fieldName) && "VERIFIED".equals(normalized)) {
+            normalized = VERIFICATION_APPROVED;
+        }
         if (!allowedValues.contains(normalized)) {
             throw new IllegalArgumentException(fieldName + " must be one of: " + String.join(", ", allowedValues));
         }
@@ -740,7 +743,7 @@ public class ContentService {
 
         if (exifMatch.locationMatch()) {
             content.setIsVerified(true);
-            content.setVerificationStatus(VERIFICATION_VERIFIED);
+            content.setVerificationStatus(VERIFICATION_APPROVED);
             content.setRejectionReason(null);
             return;
         }

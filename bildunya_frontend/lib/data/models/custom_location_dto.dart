@@ -10,6 +10,7 @@ class CustomLocationDto {
     this.imageUrl,
     this.photoUrls,
     this.tags,
+    this.verificationStatus,
     this.createdAt,
   });
 
@@ -22,6 +23,7 @@ class CustomLocationDto {
   final String? imageUrl;
   final List<String>? photoUrls;
   final List<String>? tags;
+  final String? verificationStatus;
   final String? createdAt;
 
   factory CustomLocationDto.fromJson(Map<String, dynamic> json) {
@@ -41,13 +43,18 @@ class CustomLocationDto {
       }
     }
 
-    final imageUrl = json['image_url'] as String? ?? json['imageUrl'] as String?;
-    if (parsedPhotos.isEmpty && imageUrl != null && imageUrl.trim().isNotEmpty) {
+    final imageUrl =
+        json['image_url'] as String? ?? json['imageUrl'] as String?;
+    if (parsedPhotos.isEmpty &&
+        imageUrl != null &&
+        imageUrl.trim().isNotEmpty) {
       parsedPhotos.add(imageUrl.trim());
     }
     return CustomLocationDto(
       id: (json['id'] as num?)?.toInt(),
-      userId: (json['user_id'] as num?)?.toInt() ?? (json['userId'] as num?)?.toInt(),
+      userId:
+          (json['user_id'] as num?)?.toInt() ??
+          (json['userId'] as num?)?.toInt(),
       name: json['name'] as String?,
       description: json['description'] as String?,
       latitude: (json['latitude'] as num?)?.toDouble(),
@@ -55,6 +62,9 @@ class CustomLocationDto {
       imageUrl: imageUrl,
       photoUrls: parsedPhotos,
       tags: parsedTags,
+      verificationStatus:
+          json['verification_status'] as String? ??
+          json['verificationStatus'] as String?,
       createdAt: json['created_at'] as String? ?? json['createdAt'] as String?,
     );
   }
