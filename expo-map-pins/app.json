@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "BilDunya Map Pins",
+    "slug": "expo-map-pins",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.bildunya.mappins",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Pin için fotoğraf seçmek için galeri erişimi gerekir."
+      }
+    },
+    "android": {
+      "package": "com.bildunya.mappins",
+      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
+    },
+    "plugins": [["expo-image-picker", { "photosPermission": "Pin için fotoğraf seçmek için galeri erişimi gerekir." }]]
+  }
+}
