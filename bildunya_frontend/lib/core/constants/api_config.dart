@@ -4,7 +4,8 @@ abstract final class ApiConfig {
 
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    // BURAYI GÜNCELLEDİK: Artık lokaldeki 10.0.2.2 yerine Render'daki canlı sunucumuzu kullanıyoruz!
+    // Varsayılan: Render (canlı). Lokalde çalıştırmak için:
+    // `flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080/api`
     defaultValue: 'https://bildunya-backend.onrender.com/api',
   );
 

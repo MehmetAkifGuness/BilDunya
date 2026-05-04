@@ -71,6 +71,26 @@ class ContentsProvider extends ChangeNotifier {
     }
   }
 
+  /// One-shot nearby fetch without mutating provider state.
+  Future<List<ContentDto>> fetchNearbyOnce({
+    required double latitude,
+    required double longitude,
+    double radiusKm = 25,
+    int page = 0,
+    int size = 50,
+    String sortBy = 'created_at',
+  }) async {
+    final pageResult = await _repository.getNearby(
+      latitude: latitude,
+      longitude: longitude,
+      radiusKm: radiusKm,
+      page: page,
+      size: size,
+      sortBy: sortBy,
+    );
+    return pageResult.content;
+  }
+
   Future<void> loadVerified() async {
     loadingVerified = true;
     verifiedError = null;

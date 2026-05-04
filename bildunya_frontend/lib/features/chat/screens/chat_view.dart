@@ -1,10 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/app_snackbar.dart';
 import '../providers/chat_provider.dart';
+
+enum _ChatMenuAction { refresh, reconnect, copyUsername }
 
 /// Birebir sohbet (code.html Screen 3).
 class ChatView extends StatefulWidget {
@@ -57,6 +62,79 @@ class _ChatViewState extends State<ChatView> {
       _text.clear();
       _scrollToEnd();
     }
+  }
+
+  Future<void> _refresh() async {
+    final p = context.read<ChatProvider>();
+    await p.loadHistory();
+    if (!mounted) return;
+    final err = p.error;
+    if (err != null && err.isNotEmpty) {
+      showAppSnackBar(context, err, isError: true);
+    } else {
+      showAppSnackBar(context, 'Mesajlar güncellendi.');
+    }
+  }
+
+  Future<void> _reconnect() async {
+    final p = context.read<ChatProvider>();
+    await p.init();
+    if (!mounted) return;
+    final err = p.error;
+    if (err != null && err.isNotEmpty) {
+      showAppSnackBar(context, err, isError: true);
+    } else {
+      showAppSnackBar(context, 'Bağlantı yenilendi.');
+    }
+  }
+
+  void _openQuickActions() {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: AppColors.surfaceContainer,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Symbols.refresh),
+                  title: const Text('Mesajları yenile'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    unawaited(_refresh());
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Symbols.link),
+                  title: const Text('Bağlantıyı yenile'),
+                  subtitle: const Text('WS + geçmişi tekrar bağlar.'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    unawaited(_reconnect());
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Symbols.add_photo_alternate),
+                  title: const Text('Dosya gönder (yakında)'),
+                  subtitle: const Text('Şu an sadece metin mesajı destekleniyor.'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    showAppSnackBar(
+                      this.context,
+                      'Dosya gönderme henüz desteklenmiyor.',
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -182,9 +260,38 @@ class _ChatViewState extends State<ChatView> {
               onPressed: () => Navigator.of(context).pop(),
             ),
             actions: [
-              IconButton(
+              PopupMenuButton<_ChatMenuAction>(
                 icon: const Icon(Symbols.more_vert),
-                onPressed: () {},
+                onSelected: (a) {
+                  switch (a) {
+                    case _ChatMenuAction.refresh:
+                      unawaited(_refresh());
+                      break;
+                    case _ChatMenuAction.reconnect:
+                      unawaited(_reconnect());
+                      break;
+                    case _ChatMenuAction.copyUsername:
+                      unawaited(
+                        Clipboard.setData(ClipboardData(text: p.peerUsername)),
+                      );
+                      showAppSnackBar(context, 'Kullanıcı adı kopyalandı.');
+                      break;
+                  }
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem(
+                    value: _ChatMenuAction.refresh,
+                    child: Text('Yenile'),
+                  ),
+                  PopupMenuItem(
+                    value: _ChatMenuAction.reconnect,
+                    child: Text('Bağlantıyı yenile'),
+                  ),
+                  PopupMenuItem(
+                    value: _ChatMenuAction.copyUsername,
+                    child: Text('Kullanıcı adını kopyala'),
+                  ),
+                ],
               ),
             ],
           ),
@@ -215,7 +322,7 @@ class _ChatViewState extends State<ChatView> {
                     child: Row(
                       children: [
                         IconButton(
-                          onPressed: () {},
+                          onPressed: _openQuickActions,
                           icon: const Icon(Symbols.add),
                           color: AppColors.secondary,
                         ),

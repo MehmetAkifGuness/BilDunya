@@ -6,11 +6,16 @@ import 'auth_interceptor.dart';
 
 abstract final class DioClient {
   static Dio create(FlutterSecureStorage storage) {
+    final baseUrl = ApiConfig.baseUrl;
+    final isRender = baseUrl.contains('onrender.com');
     final dio = Dio(
       BaseOptions(
-        baseUrl: ApiConfig.baseUrl,
-        connectTimeout: const Duration(seconds: 20),
-        receiveTimeout: const Duration(seconds: 30),
+        baseUrl: baseUrl,
+        // Render Free instance cold-start can take ~60s; keep timeouts lenient there.
+        connectTimeout:
+            isRender ? const Duration(seconds: 90) : const Duration(seconds: 20),
+        receiveTimeout:
+            isRender ? const Duration(seconds: 90) : const Duration(seconds: 30),
         headers: {
           Headers.acceptHeader: Headers.jsonContentType,
           Headers.contentTypeHeader: Headers.jsonContentType,

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -130,6 +132,13 @@ class _MapViewState extends State<MapView> {
   _MapPin? _selected;
   LatLng? _pendingPoint;
 
+  final Distance _distance = const Distance();
+  final Map<String, List<String>> _pinImageCache = <String, List<String>>{};
+  final Map<String, Future<List<String>>> _pinImageInFlight =
+      <String, Future<List<String>>>{};
+  final Set<String> _pinImageLoading = <String>{};
+  final Map<String, String> _pinImageError = <String, String>{};
+
   @override
   void initState() {
     super.initState();
@@ -139,9 +148,9 @@ class _MapViewState extends State<MapView> {
     _customLocations.addListener(_onDataChanged);
     _searchController.addListener(() {
       if (!mounted) return;
-      setState(() {
-        _ensureSelection(_filteredPins());
-      });
+      final before = _selected?.key;
+      setState(() => _ensureSelection(_filteredPins()));
+      _prefetchIfSelectionChanged(before, _selected);
     });
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await Future.wait([
@@ -170,9 +179,127 @@ class _MapViewState extends State<MapView> {
 
   void _onDataChanged() {
     if (!mounted) return;
-    setState(() {
-      _ensureSelection(_filteredPins());
+    final before = _selected?.key;
+    setState(() => _ensureSelection(_filteredPins()));
+    _prefetchIfSelectionChanged(before, _selected);
+  }
+
+  void _prefetchIfSelectionChanged(String? beforeKey, _MapPin? next) {
+    final nextKey = next?.key;
+    if (nextKey == null || nextKey == beforeKey) return;
+    final n = next;
+    if (n == null) return;
+    if (n is _CustomPin) return;
+    unawaited(_ensurePinImagesLoaded(n));
+  }
+
+  void _selectPin(_MapPin pin) {
+    final before = _selected?.key;
+    setState(() => _selected = pin);
+    _prefetchIfSelectionChanged(before, _selected);
+  }
+
+  double _pinExploreRadiusKm(_MapPin pin) {
+    return switch (pin) {
+      _PopularPin() => 35,
+      _ContentPin() => 12,
+      _CustomPin() => 12,
+    };
+  }
+
+  bool _isImageContent(ContentDto c) {
+    final type = (c.contentType ?? '').trim().toUpperCase();
+    if (type == 'VIDEO' || type == 'TEXT') return false;
+    final url = (c.fileUrl ?? '').toLowerCase();
+    if (url.endsWith('.mp4') ||
+        url.endsWith('.mov') ||
+        url.endsWith('.m4v') ||
+        url.endsWith('.webm')) {
+      return false;
+    }
+    return true;
+  }
+
+  Future<List<String>> _ensurePinImagesLoaded(_MapPin pin) {
+    final key = pin.key;
+    final cached = _pinImageCache[key];
+    if (cached != null) return Future.value(cached);
+
+    final inflight = _pinImageInFlight[key];
+    if (inflight != null) return inflight;
+
+    _pinImageError.remove(key);
+    _pinImageLoading.add(key);
+    if (mounted) setState(() {});
+
+    final future = _loadPinImages(pin).whenComplete(() {
+      _pinImageInFlight.remove(key);
     });
+    _pinImageInFlight[key] = future;
+    return future;
+  }
+
+  Future<List<String>> _loadPinImages(_MapPin pin) async {
+    final key = pin.key;
+    try {
+      final radiusKm = _pinExploreRadiusKm(pin);
+      final list = await _contents.fetchNearbyOnce(
+        latitude: pin.point.latitude,
+        longitude: pin.point.longitude,
+        radiusKm: radiusKm,
+        size: 50,
+        sortBy: 'created_at',
+      );
+      if (!mounted) return const <String>[];
+
+      final candidates = <(double km, String url)>[];
+      final seen = <String>{};
+      for (final c in list) {
+        if (c.latitude == null || c.longitude == null) continue;
+        if (!_isImageContent(c)) continue;
+        final url = ApiConfig.resolveFileUrl(c.fileUrl);
+        if (url.isEmpty) continue;
+        if (!seen.add(url)) continue;
+        final km = _distance.as(
+          LengthUnit.Kilometer,
+          pin.point,
+          LatLng(c.latitude!, c.longitude!),
+        );
+        candidates.add((km, url));
+      }
+
+      candidates.sort((a, b) => a.$1.compareTo(b.$1));
+      final urls = candidates.map((x) => x.$2).toList(growable: false);
+
+      _pinImageCache[key] = urls;
+      _pinImageError.remove(key);
+      return urls;
+    } catch (e) {
+      _pinImageCache[key] = const <String>[];
+      _pinImageError[key] = userFriendlyErrorMessage(e);
+      return const <String>[];
+    } finally {
+      _pinImageLoading.remove(key);
+      if (mounted) setState(() {});
+    }
+  }
+
+  Future<void> _openExploreGallery(_MapPin pin, {int initialIndex = 0}) async {
+    final urls = await _ensurePinImagesLoaded(pin);
+    if (!mounted) return;
+    if (urls.isEmpty) {
+      showAppSnackBar(context, 'Bu pine ait görsel bulunamadı.');
+      return;
+    }
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => CustomLocationGalleryView(
+          title: pin.title,
+          imageUrls: urls,
+          initialIndex: initialIndex,
+        ),
+      ),
+    );
   }
 
   List<ContentDto> _filteredContents(List<ContentDto> raw) {
@@ -259,6 +386,7 @@ class _MapViewState extends State<MapView> {
   }
 
   void _setChip(_MapChip next) {
+    final before = _selected?.key;
     setState(() {
       if (_chip == next) {
         _chip = _MapChip.none;
@@ -267,13 +395,16 @@ class _MapViewState extends State<MapView> {
       }
       _ensureSelection(_filteredPins());
     });
+    _prefetchIfSelectionChanged(before, _selected);
   }
 
   void _setLayer(_PinLayer next) {
+    final before = _selected?.key;
     setState(() {
       _layer = next;
       _ensureSelection(_filteredPins());
     });
+    _prefetchIfSelectionChanged(before, _selected);
   }
 
   bool _matchesQuery(_MapPin pin, String q) {
@@ -389,8 +520,8 @@ class _MapViewState extends State<MapView> {
             button: true,
             label: _pinSemanticsLabel(pin),
             hint: 'Detayları görmek için dokunun.',
-            child: GestureDetector(
-              onTap: () => setState(() => _selected = pin),
+                child: GestureDetector(
+              onTap: () => _selectPin(pin),
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: _selected?.key == pin.key
@@ -588,9 +719,22 @@ class _MapViewState extends State<MapView> {
               pin: _selected,
               loading: loading,
               error: combinedError,
-              onExplore: _selected is _ContentPin
-                  ? () => _openDetail(_selected! as _ContentPin)
-                  : null,
+              relatedImageUrls: _selected == null
+                  ? const <String>[]
+                  : (_pinImageCache[_selected!.key] ?? const <String>[]),
+              relatedLoading: _selected == null
+                  ? false
+                  : _pinImageLoading.contains(_selected!.key),
+              relatedError:
+                  _selected == null ? null : _pinImageError[_selected!.key],
+              onOpenDetail:
+                  _selected is _ContentPin ? () => _openDetail(_selected! as _ContentPin) : null,
+              onExplore: _selected == null
+                  ? null
+                  : () => _openExploreGallery(_selected!),
+              onExploreAtIndex: _selected == null
+                  ? null
+                  : (i) => _openExploreGallery(_selected!, initialIndex: i),
             ),
           ),
         ],
@@ -693,13 +837,23 @@ class _BottomPreviewCard extends StatelessWidget {
     required this.pin,
     required this.loading,
     this.error,
+    required this.relatedImageUrls,
+    required this.relatedLoading,
+    this.relatedError,
+    this.onOpenDetail,
     this.onExplore,
+    this.onExploreAtIndex,
   });
 
   final _MapPin? pin;
   final bool loading;
   final String? error;
+  final List<String> relatedImageUrls;
+  final bool relatedLoading;
+  final String? relatedError;
+  final VoidCallback? onOpenDetail;
   final VoidCallback? onExplore;
+  final ValueChanged<int>? onExploreAtIndex;
 
   @override
   Widget build(BuildContext context) {
@@ -752,6 +906,9 @@ class _BottomPreviewCard extends StatelessWidget {
 
     final url = p.imageUrl;
     final isContent = p is _ContentPin;
+    final related = relatedImageUrls;
+    final previewImageUrl =
+        url.isNotEmpty ? url : (related.isNotEmpty ? related.first : '');
 
     return Material(
       elevation: 10,
@@ -762,29 +919,44 @@ class _BottomPreviewCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: url.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: url,
-                      width: 64,
-                      height: 64,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => const SizedBox(
+            GestureDetector(
+              onTap: onOpenDetail,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: previewImageUrl.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: previewImageUrl,
                         width: 64,
                         height: 64,
-                        child: ColoredBox(
-                          color: AppColors.surfaceVariant,
-                          child: Center(
-                            child: SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => const SizedBox(
+                          width: 64,
+                          height: 64,
+                          child: ColoredBox(
+                            color: AppColors.surfaceVariant,
+                            child: Center(
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      errorWidget: (context, url, error) => const SizedBox(
+                        errorWidget: (context, url, error) => const SizedBox(
+                          width: 64,
+                          height: 64,
+                          child: ColoredBox(
+                            color: AppColors.surfaceVariant,
+                            child: Icon(
+                              Symbols.landscape,
+                              color: AppColors.secondary,
+                            ),
+                          ),
+                        ),
+                      )
+                    : const SizedBox(
                         width: 64,
                         height: 64,
                         child: ColoredBox(
@@ -795,18 +967,7 @@ class _BottomPreviewCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                    )
-                  : const SizedBox(
-                      width: 64,
-                      height: 64,
-                      child: ColoredBox(
-                        color: AppColors.surfaceVariant,
-                        child: Icon(
-                          Symbols.landscape,
-                          color: AppColors.secondary,
-                        ),
-                      ),
-                    ),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -849,8 +1010,95 @@ class _BottomPreviewCard extends StatelessWidget {
                       height: 1.35,
                     ),
                   ),
+                  if (relatedError != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      relatedError!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: AppColors.error,
+                      ),
+                    ),
+                  ] else if (relatedLoading && related.isEmpty) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          'Görseller yükleniyor…',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: AppColors.secondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ] else if (related.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      height: 44,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: related.length > 6 ? 6 : related.length,
+                        separatorBuilder: (context, _) =>
+                            const SizedBox(width: 8),
+                        itemBuilder: (context, i) {
+                          final u = related[i];
+                          return InkWell(
+                            onTap: onExploreAtIndex == null
+                                ? null
+                                : () => onExploreAtIndex!.call(i),
+                            borderRadius: BorderRadius.circular(10),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: CachedNetworkImage(
+                                imageUrl: u,
+                                width: 44,
+                                height: 44,
+                                fit: BoxFit.cover,
+                                placeholder: (context, url) => const SizedBox(
+                                  width: 44,
+                                  height: 44,
+                                  child: ColoredBox(
+                                    color: AppColors.surfaceVariant,
+                                    child: Center(
+                                      child: SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                errorWidget: (context, url, error) =>
+                                    const SizedBox(
+                                  width: 44,
+                                  height: 44,
+                                  child: ColoredBox(
+                                    color: AppColors.surfaceVariant,
+                                    child: Icon(
+                                      Symbols.broken_image,
+                                      color: AppColors.secondary,
+                                      size: 18,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 10),
-                  if (isContent)
+                  if (onExplore != null)
                     Align(
                       alignment: Alignment.centerLeft,
                       child: FilledButton(
@@ -867,7 +1115,7 @@ class _BottomPreviewCard extends StatelessWidget {
                           shape: const StadiumBorder(),
                         ),
                         child: Text(
-                          'KEŞFET',
+                          isContent ? 'KEŞFET' : 'KEŞFET',
                           style: theme.textTheme.labelSmall?.copyWith(
                             fontWeight: FontWeight.w900,
                             letterSpacing: 0.8,
