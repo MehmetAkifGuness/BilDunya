@@ -31,7 +31,8 @@ public interface ContentRepository extends JpaRepository<Content, Long> {
             "(6371 * acos(least(greatest(" +
             "cos(radians(:latitude)) * cos(radians(c.latitude)) * cos(radians(c.longitude) - radians(:longitude)) + " +
             "sin(radians(:latitude)) * sin(radians(c.latitude))" +
-            ", -1), 1))) <= :radiusKm",
+            ", -1), 1))) <= :radiusKm " +
+            "ORDER BY c.created_at DESC",
             countQuery = "SELECT count(*) FROM contents c " +
                     "WHERE c.is_deleted = false AND " +
                     "(c.verification_status = 'APPROVED' OR c.verification_status IS NULL OR c.verification_status = 'VERIFIED') AND " +

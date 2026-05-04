@@ -88,7 +88,7 @@ public class ContentController {
             @RequestParam(defaultValue = "20") Integer size,
             @RequestParam(defaultValue = "created_at") String sortBy) {
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy).descending());
+        Pageable pageable = PageRequest.of(page, size);
         Page<ContentDto> contents = contentService.getNearbyContent(latitude, longitude, radiusKm, pageable);
 
         return ResponseEntity.ok(contents);

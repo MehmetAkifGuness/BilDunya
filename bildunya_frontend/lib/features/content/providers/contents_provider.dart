@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../core/utils/user_friendly_error.dart';
 import '../../../data/models/content_dto.dart';
 import '../../../data/models/create_content_request.dart';
 import '../../../data/repositories/content_repository.dart';
@@ -67,7 +68,7 @@ class ContentsProvider extends ChangeNotifier {
       );
       nearby = page.content;
     } catch (e) {
-      nearbyError = e.toString();
+      nearbyError = userFriendlyErrorMessage(e);
       nearby = [];
     } finally {
       loadingNearby = false;
