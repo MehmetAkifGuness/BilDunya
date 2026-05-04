@@ -9,9 +9,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.Collection;
-import java.util.List;
-
 @Repository
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
 
@@ -48,19 +45,4 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     int markConversationAsReadByConversationId(
             @Param("conversationId") Long conversationId,
             @Param("receiverId") Long receiverId);
-
-    /**
-     * Her konuşma için en son mesajın gönderen kullanıcı adı (PostgreSQL DISTINCT ON).
-     */
-    @Query(
-            value = """
-                    SELECT DISTINCT ON (m.conversation_id) m.conversation_id, u.username
-                    FROM chat_messages m
-                    JOIN users u ON u.id = m.sender_id
-                    WHERE m.is_deleted = false AND m.conversation_id IN (:ids)
-                    ORDER BY m.conversation_id, m.created_at DESC
-                    """,
-            nativeQuery = true
-    )
-    List<Object[]> findLatestSenderUsernameRowsByConversationIds(@Param("ids") Collection<Long> ids);
 }

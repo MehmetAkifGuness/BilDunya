@@ -16,6 +16,7 @@ import 'features/auth/screens/register_screen.dart';
 import 'features/auth/screens/splash_screen.dart';
 import 'features/content/providers/contents_provider.dart';
 import 'features/map/providers/custom_locations_provider.dart';
+import 'features/chat/providers/chat_inbox_provider.dart';
 import 'features/profile/providers/profile_provider.dart';
 import 'features/content/screens/content_detail_view.dart';
 import 'features/content/screens/create_content_view.dart';
@@ -40,6 +41,10 @@ void main() {
         Provider<CustomLocationRepository>.value(value: customLocationRepository),
         Provider<CommentRepository>.value(value: commentRepository),
         Provider<ChatRepository>.value(value: chatRepository),
+        ChangeNotifierProvider(
+          create: (ctx) =>
+              ChatInboxProvider(ctx.read<ChatRepository>())..load(),
+        ),
         Provider<ProfileRepository>.value(value: profileRepository),
         ChangeNotifierProvider(
           create: (_) => AuthProvider(authRepository),

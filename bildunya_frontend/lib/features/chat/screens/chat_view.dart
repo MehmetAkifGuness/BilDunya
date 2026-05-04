@@ -6,6 +6,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/chat_time_format.dart';
 import '../../../core/theme/app_radii.dart';
 import '../../../core/utils/app_snackbar.dart';
 import '../../content/screens/content_detail_args.dart';
@@ -329,7 +330,7 @@ class _ChatViewState extends State<ChatView> {
                     final m = p.messages[i];
                     return _MessageBubble(
                       text: m.text ?? '',
-                      time: m.createdAt ?? '',
+                      time: formatDmTime(m.createdAt),
                       mine: m.senderUsername == p.myUsername,
                     );
                   },

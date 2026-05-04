@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/chat_time_format.dart';
 import '../../../core/theme/app_radii.dart';
 import '../../../core/utils/app_snackbar.dart';
 import '../../../data/models/conversation_summary_dto.dart';
@@ -82,6 +85,9 @@ class ChatInboxView extends StatelessWidget {
         ),
       ),
     );
+    if (context.mounted) {
+      unawaited(context.read<ChatInboxProvider>().load());
+    }
   }
 
   Future<void> _openConversation(
@@ -146,9 +152,7 @@ class ChatInboxView extends StatelessWidget {
 
         final myUsername = auth.user?.username;
 
-        return ChangeNotifierProvider(
-          create: (ctx) => ChatInboxProvider(ctx.read<ChatRepository>())..load(),
-          child: Consumer<ChatInboxProvider>(
+        return Consumer<ChatInboxProvider>(
             builder: (context, p, _) {
               if (p.loading && p.conversations.isEmpty) {
                 return const Scaffold(
@@ -234,7 +238,6 @@ class ChatInboxView extends StatelessWidget {
                 ),
               );
             },
-          ),
         );
       },
     );
@@ -253,7 +256,7 @@ class ChatInboxView extends StatelessWidget {
     final lastFromMe = _lastMessageIsMine(myUsername, c);
     final subtitle = _conversationListSubtitle(c, myUsername);
     final contentLine = (c.relatedContentLabel ?? '').trim();
-    final time = c.lastMessageAt ?? '';
+    final time = formatDmTime(c.lastMessageAt);
     final unread = c.unreadCount ?? 0;
     final hasUnread = unread > 0;
 
@@ -437,9 +440,14 @@ class ChatInboxView extends StatelessWidget {
 
   bool _lastMessageIsMine(String? myUsername, ConversationSummaryDto c) {
     final me = (myUsername ?? '').trim().toLowerCase();
+    if (me.isEmpty) return false;
     final sender = (c.lastMessageSenderUsername ?? '').trim().toLowerCase();
-    if (me.isEmpty || sender.isEmpty) return false;
-    return me == sender;
+    if (sender.isNotEmpty) {
+      return sender == me;
+    }
+    // Sunucu alanı yok / eski API: story yanıtı `[REPLY:…]` öneki bu uygulamada yalnızca bizden gider.
+    final last = (c.lastMessage ?? '').trim();
+    return last.startsWith('[REPLY:');
   }
 
   /// Durum ikonları yalnızca son mesaj bize aitse; `Siz:` önekli ham metinde çift tik.

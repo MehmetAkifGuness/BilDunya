@@ -27,9 +27,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.sql.Timestamp;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 @Service
@@ -112,40 +109,7 @@ public class ChatService {
                         .relatedContentId(toLongOrNull(p.getRelatedContentId()))
                         .relatedContentLabel(trimToNull(p.getRelatedContentLabel()))
                         .build());
-        enrichLastMessageSenderUsernames(page.getContent());
         return page;
-    }
-
-    private void enrichLastMessageSenderUsernames(List<ConversationSummaryDto> rows) {
-        if (rows == null || rows.isEmpty()) {
-            return;
-        }
-        List<Long> ids = rows.stream()
-                .map(ConversationSummaryDto::getId)
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
-        if (ids.isEmpty()) {
-            return;
-        }
-        List<Object[]> found = chatMessageRepository.findLatestSenderUsernameRowsByConversationIds(ids);
-        Map<Long, String> byConversationId = new HashMap<>();
-        for (Object[] row : found) {
-            if (row == null || row.length < 2 || row[0] == null || row[1] == null) {
-                continue;
-            }
-            Long cid = ((Number) row[0]).longValue();
-            String username = row[1].toString().trim();
-            if (!username.isEmpty()) {
-                byConversationId.put(cid, username);
-            }
-        }
-        for (ConversationSummaryDto dto : rows) {
-            Long id = dto.getId();
-            if (id != null && byConversationId.containsKey(id)) {
-                dto.setLastMessageSenderUsername(byConversationId.get(id));
-            }
-        }
     }
 
     public ConversationDto openConversation(String username, CreateConversationRequest request) {

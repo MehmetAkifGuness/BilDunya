@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -12,6 +14,7 @@ import '../../../data/models/content_dto.dart';
 import '../../../data/repositories/chat_repository.dart';
 import '../../../data/repositories/comment_repository.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../chat/providers/chat_inbox_provider.dart';
 import '../../chat/providers/chat_provider.dart';
 import '../../chat/screens/chat_view.dart';
 import '../providers/comments_provider.dart';
@@ -128,7 +131,7 @@ class _ContentDetailViewState extends State<ContentDetailView> {
     }
 
     if (!mounted) return;
-    Navigator.of(context).push<void>(
+    await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (ctx) => ChangeNotifierProvider(
           create: (_) => ChatProvider(
@@ -145,6 +148,9 @@ class _ContentDetailViewState extends State<ContentDetailView> {
         ),
       ),
     );
+    if (mounted) {
+      unawaited(context.read<ChatInboxProvider>().load());
+    }
   }
 
   Future<void> _openInExternalMap(ContentDto c) async {
