@@ -11,6 +11,8 @@ import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
@@ -24,6 +26,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 import java.time.LocalDateTime;
 
 @RestControllerAdvice
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
@@ -264,25 +267,6 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
-    /**
-     * Spring 6.1+ can throw {@link NoResourceFoundException} for unknown paths (static resource lookup)
-     * which would otherwise be caught by the generic {@code Exception} handler and incorrectly mapped to 500.
-     */
-    @ExceptionHandler(NoResourceFoundException.class)
-    public ResponseEntity<ErrorResponse> handleNoResourceFoundException(
-            NoResourceFoundException ex, WebRequest request) {
-
-        ErrorResponse errorResponse = ErrorResponse.builder()
-                .status(HttpStatus.NOT_FOUND.value())
-                .message("Endpoint bulunamadı.")
-                .error("Not Found")
-                .timestamp(LocalDateTime.now())
-                .path(request.getDescription(false).replace("uri=", ""))
-                .build();
-
-        return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
-    }
-
     @ExceptionHandler(NoHandlerFoundException.class)
     public ResponseEntity<ErrorResponse> handleNoHandlerFoundException(
             NoHandlerFoundException ex, WebRequest request) {
@@ -301,6 +285,17 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGlobalException(
             Exception ex, WebRequest request) {
+
+        if (ex instanceof NoResourceFoundException) {
+            ErrorResponse errorResponse = ErrorResponse.builder()
+                    .status(HttpStatus.NOT_FOUND.value())
+                    .message("Endpoint bulunamadı.")
+                    .error("Not Found")
+                    .timestamp(LocalDateTime.now())
+                    .path(request.getDescription(false).replace("uri=", ""))
+                    .build();
+            return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+        }
 
         log.error("Unhandled exception: {}", ex.getMessage(), ex);
 
