@@ -15,7 +15,10 @@ import '../providers/chat_inbox_provider.dart';
 import '../providers/chat_provider.dart';
 import 'chat_view.dart';
 
-/// Gelen kutusu — yalnızca bu dosyadaki UI; [ChatInboxProvider] ve servisler değiştirilmez.
+// ─────────────────────────────────────────────────────────────────────────────
+// Ana Widget
+// ─────────────────────────────────────────────────────────────────────────────
+
 class ChatInboxView extends StatefulWidget {
   const ChatInboxView({super.key});
 
@@ -24,12 +27,12 @@ class ChatInboxView extends StatefulWidget {
 }
 
 class _ChatInboxViewState extends State<ChatInboxView> {
-  /// [Dismissible] ile kaldırılan satırlar (provider’a dokunmadan geçici gizleme).
   final Set<String> _dismissedKeys = {};
 
   static String _rowKey(ConversationSummaryDto c) =>
       '${c.id ?? 'x'}_${c.otherUsername ?? ''}';
 
+  // ── Yeni sohbet açma dialogu ──────────────────────────────────────────────
   Future<void> _promptAndOpenChat(BuildContext context) async {
     final auth = context.read<AuthProvider>();
     if (!auth.isAuthenticated) {
@@ -72,16 +75,15 @@ class _ChatInboxViewState extends State<ChatInboxView> {
     final username = (peer ?? '').trim();
     if (username.isEmpty) return;
 
-    final display = username;
     int? convId;
     try {
-      final conv =
-          await context.read<ChatRepository>().openConversation(username);
+      final conv = await context.read<ChatRepository>().openConversation(username);
       convId = conv.id;
     } catch (_) {
       convId = null;
     }
     if (!context.mounted) return;
+
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (ctx) => ChangeNotifierProvider(
@@ -90,7 +92,7 @@ class _ChatInboxViewState extends State<ChatInboxView> {
             myUsername: me,
             conversationId: convId,
             peerUsername: username,
-            peerDisplayName: display,
+            peerDisplayName: username,
           )..init(),
           child: const ChatView(),
         ),
@@ -102,6 +104,7 @@ class _ChatInboxViewState extends State<ChatInboxView> {
     }
   }
 
+  // ── Mevcut konuşmayı açma ─────────────────────────────────────────────────
   Future<void> _openConversation(
     BuildContext context,
     ConversationSummaryDto c,
@@ -115,6 +118,7 @@ class _ChatInboxViewState extends State<ChatInboxView> {
     final peer = c.otherUsername;
     final convId = c.id;
     if (me == null || peer == null || peer.isEmpty) return;
+
     final name = (c.otherFullName ?? '').trim().isNotEmpty
         ? c.otherFullName!.trim()
         : peer;
@@ -129,8 +133,7 @@ class _ChatInboxViewState extends State<ChatInboxView> {
             conversationId: convId,
             peerUsername: peer,
             peerDisplayName: name,
-            relatedContentLabel:
-                relatedLabel.isEmpty ? null : relatedLabel,
+            relatedContentLabel: relatedLabel.isEmpty ? null : relatedLabel,
             relatedContentId: c.relatedContentId,
           )..init(),
           child: const ChatView(),
@@ -144,11 +147,13 @@ class _ChatInboxViewState extends State<ChatInboxView> {
     }
   }
 
+  // ── Yenile ───────────────────────────────────────────────────────────────
   Future<void> _reloadInbox(BuildContext context) async {
     await context.read<ChatInboxProvider>().load();
     if (mounted) setState(() => _dismissedKeys.clear());
   }
 
+  // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
@@ -156,11 +161,7 @@ class _ChatInboxViewState extends State<ChatInboxView> {
         if (!auth.isAuthenticated) {
           return Scaffold(
             backgroundColor: AppColors.surfaceContainerLowest,
-            appBar: AppBar(
-              backgroundColor: AppColors.surfaceContainerLowest,
-              foregroundColor: AppColors.onSurface,
-              title: const Text('Mesajlar'),
-            ),
+            appBar: _buildAppBar(context, enabled: false),
             body: Center(
               child: Text(
                 'Mesajlar için giriş yapın.',
@@ -176,68 +177,127 @@ class _ChatInboxViewState extends State<ChatInboxView> {
 
         return Consumer<ChatInboxProvider>(
           builder: (context, p, _) {
-            final visible = p.conversations
-                .where((c) => !_dismissedKeys.contains(_rowKey(c)))
-                .toList();
-
+            // ── Yükleniyor (ilk açılış) ───────────────────────────────────
             if (p.loading && p.conversations.isEmpty) {
               return Scaffold(
                 backgroundColor: AppColors.surfaceContainerLowest,
-                appBar: AppBar(
-                  backgroundColor: AppColors.surfaceContainerLowest,
-                  foregroundColor: AppColors.onSurface,
-                  title: const Text('Mesajlar'),
-                  actions: [
-                    IconButton(
-                      tooltip: 'Yeni sohbet',
-                      onPressed: null,
-                      icon: const Icon(Symbols.add_comment),
-                    ),
-                    IconButton(
-                      tooltip: 'Yenile',
-                      onPressed: null,
-                      icon: const Icon(Symbols.refresh),
-                    ),
-                  ],
-                ),
+                appBar: _buildAppBar(context, enabled: false),
                 body: const Center(child: CircularProgressIndicator()),
               );
             }
 
+            // ── Hata (ve liste hâlâ boş) ──────────────────────────────────
+            if (p.error != null && p.conversations.isEmpty) {
+              return Scaffold(
+                backgroundColor: AppColors.surfaceContainerLowest,
+                appBar: _buildAppBar(
+                  context,
+                  enabled: !p.loading,
+                  onNewChat: () => _promptAndOpenChat(context),
+                  onRefresh: () => _reloadInbox(context),
+                ),
+                body: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          p.error!,
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: AppColors.error,
+                              ),
+                        ),
+                        const SizedBox(height: 20),
+                        FilledButton(
+                          onPressed:
+                              p.loading ? null : () => _reloadInbox(context),
+                          child: const Text('Yeniden dene'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            // ── Boş liste ────────────────────────────────────────────────
+            if (!p.loading && p.error == null && p.conversations.isEmpty) {
+              return Scaffold(
+                backgroundColor: AppColors.surfaceContainerLowest,
+                appBar: _buildAppBar(
+                  context,
+                  enabled: true,
+                  onNewChat: () => _promptAndOpenChat(context),
+                  onRefresh: () => _reloadInbox(context),
+                ),
+                body: const Center(
+                  child: Text(
+                    'Henüz sohbet yok',
+                    style: TextStyle(color: AppColors.secondary),
+                  ),
+                ),
+              );
+            }
+
+            // ── Veri var ─────────────────────────────────────────────────
+            final visible = p.conversations
+                .where((c) => !_dismissedKeys.contains(_rowKey(c)))
+                .toList();
+
             return Scaffold(
               backgroundColor: AppColors.surfaceContainerLowest,
-              appBar: AppBar(
-                backgroundColor: AppColors.surfaceContainerLowest,
-                foregroundColor: AppColors.onSurface,
-                title: const Text('Mesajlar'),
-                actions: [
-                  IconButton(
-                    tooltip: 'Yeni sohbet',
-                    onPressed: () => _promptAndOpenChat(context),
-                    icon: const Icon(Symbols.add_comment),
-                  ),
-                  IconButton(
-                    tooltip: 'Yenile',
-                    onPressed: p.loading
-                        ? null
-                        : () => _reloadInbox(context),
-                    icon: const Icon(Symbols.refresh),
-                  ),
-                ],
+              appBar: _buildAppBar(
+                context,
+                enabled: !p.loading,
+                onNewChat: () => _promptAndOpenChat(context),
+                onRefresh: () => _reloadInbox(context),
               ),
               body: RefreshIndicator(
                 color: AppColors.primaryContainer,
                 onRefresh: () => _reloadInbox(context),
-                child: _InboxScrollBody(
-                  p: p,
-                  visible: visible,
-                  myUsername: myUsername,
-                  onDismissedRow: (key) {
-                    debugPrint('Inbox dismiss: conversationKey=$key');
-                    setState(() => _dismissedKeys.add(key));
+                child: ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                  itemCount: 1 + visible.length,
+                  separatorBuilder: (_, index) => SizedBox(
+                    height: index == 0 ? 14 : 4,
+                  ),
+                  itemBuilder: (context, index) {
+                    if (index == 0) return const _InboxSearchBar();
+
+                    final c = visible[index - 1];
+                    final key = _rowKey(c);
+
+                    return Dismissible(
+                      key: ValueKey<String>('dismiss_$key'),
+                      direction: DismissDirection.endToStart,
+                      background: const SizedBox.shrink(),
+                      secondaryBackground: Container(
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(right: 24),
+                        decoration: BoxDecoration(
+                          color: AppColors.error,
+                          borderRadius: BorderRadius.circular(AppRadii.sm),
+                        ),
+                        child: const Icon(
+                          Symbols.delete,
+                          color: AppColors.onError,
+                          size: 28,
+                        ),
+                      ),
+                      onDismissed: (_) {
+                        debugPrint('Inbox dismiss: conversationKey=$key');
+                        setState(() => _dismissedKeys.add(key));
+                      },
+                      child: _ConversationTile(
+                        conversation: c,
+                        myUsername: myUsername,
+                        onTap: () => _openConversation(context, c),
+                      ),
+                    );
                   },
-                  onOpenChat: (c) => _openConversation(context, c),
-                  onRetry: () => _reloadInbox(context),
                 ),
               ),
             );
@@ -246,121 +306,37 @@ class _ChatInboxViewState extends State<ChatInboxView> {
       },
     );
   }
-}
 
-class _InboxScrollBody extends StatelessWidget {
-  const _InboxScrollBody({
-    required this.p,
-    required this.visible,
-    required this.myUsername,
-    required this.onDismissedRow,
-    required this.onOpenChat,
-    required this.onRetry,
-  });
-
-  final ChatInboxProvider p;
-  final List<ConversationSummaryDto> visible;
-  final String? myUsername;
-  final void Function(String key) onDismissedRow;
-  final void Function(ConversationSummaryDto c) onOpenChat;
-  final VoidCallback onRetry;
-
-  static String _rowKey(ConversationSummaryDto c) =>
-      '${c.id ?? 'x'}_${c.otherUsername ?? ''}';
-
-  @override
-  Widget build(BuildContext context) {
-    const physics = AlwaysScrollableScrollPhysics();
-    const pad = EdgeInsets.fromLTRB(16, 8, 16, 24);
-
-    if (p.error != null && p.conversations.isEmpty) {
-      return ListView(
-        physics: physics,
-        padding: pad,
-        children: [
-          const SizedBox(height: 80),
-          Text(
-            p.error!,
-            textAlign: TextAlign.center,
-            style: Theme.of(context)
-                .textTheme
-                .bodyMedium
-                ?.copyWith(color: AppColors.error),
-          ),
-          const SizedBox(height: 20),
-          Center(
-            child: FilledButton(
-              onPressed: p.loading ? null : onRetry,
-              child: const Text('Yeniden dene'),
-            ),
-          ),
-        ],
-      );
-    }
-
-    if (!p.loading && p.error == null && p.conversations.isEmpty) {
-      return ListView(
-        physics: physics,
-        padding: pad,
-        children: [
-          const _InboxSearchBar(),
-          const SizedBox(height: 32),
-          Center(
-            child: Text(
-              'Henüz sohbet yok',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: AppColors.secondary,
-                  ),
-            ),
-          ),
-        ],
-      );
-    }
-
-    return ListView.separated(
-      physics: physics,
-      padding: pad,
-      itemCount: 1 + visible.length,
-      separatorBuilder: (context, index) {
-        if (index == 0) {
-          return const SizedBox(height: 14);
-        }
-        return const SizedBox(height: 4);
-      },
-      itemBuilder: (context, index) {
-        if (index == 0) {
-          return const _InboxSearchBar();
-        }
-        final c = visible[index - 1];
-        final key = _rowKey(c);
-        return Dismissible(
-          key: ValueKey<String>('dismiss_$key'),
-          direction: DismissDirection.endToStart,
-          background: const SizedBox.shrink(),
-          secondaryBackground: Container(
-            alignment: Alignment.centerRight,
-            padding: const EdgeInsets.only(right: 24),
-            decoration: BoxDecoration(
-              color: AppColors.error,
-              borderRadius: BorderRadius.circular(AppRadii.sm),
-            ),
-            child: const Icon(
-              Symbols.delete,
-              color: AppColors.onError,
-              size: 28,
-            ),
-          ),
-          onDismissed: (_) => onDismissedRow(key),
-          child: _ConversationTile(
-            conversation: c,
-            myUsername: myUsername,
-            onTap: () => onOpenChat(c),
-          ),
-        );
-      },
+  // ── AppBar yardımcısı ─────────────────────────────────────────────────────
+  AppBar _buildAppBar(
+    BuildContext context, {
+    required bool enabled,
+    VoidCallback? onNewChat,
+    VoidCallback? onRefresh,
+  }) {
+    return AppBar(
+      backgroundColor: AppColors.surfaceContainerLowest,
+      foregroundColor: AppColors.onSurface,
+      title: const Text('Mesajlar'),
+      actions: [
+        IconButton(
+          tooltip: 'Yeni sohbet',
+          onPressed: enabled ? onNewChat : null,
+          icon: const Icon(Symbols.add_comment),
+        ),
+        IconButton(
+          tooltip: 'Yenile',
+          onPressed: enabled ? onRefresh : null,
+          icon: const Icon(Symbols.refresh),
+        ),
+      ],
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Arama Çubuğu
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _InboxSearchBar extends StatefulWidget {
   const _InboxSearchBar();
@@ -430,6 +406,10 @@ class _InboxSearchBarState extends State<_InboxSearchBar> {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Sohbet Satırı
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _ConversationTile extends StatelessWidget {
   const _ConversationTile({
     required this.conversation,
@@ -443,53 +423,65 @@ class _ConversationTile extends StatelessWidget {
 
   static final RegExp _replyTag = RegExp(r'^\[REPLY:[^\]]+\]\s*');
 
+  // ── Yardımcı metodlar ─────────────────────────────────────────────────────
+
   String _displayName(ConversationSummaryDto c) {
-    final peer = c.otherUsername ?? '';
     final full = (c.otherFullName ?? '').trim();
     if (full.isNotEmpty) return full;
+    final peer = (c.otherUsername ?? '').trim();
     return peer.isNotEmpty ? peer : '?';
   }
 
-  String _subtitle(String? myUsername, ConversationSummaryDto c) {
+  bool _lastMessageIsMine(ConversationSummaryDto c) {
+    final me = (myUsername ?? '').trim().toLowerCase();
+    if (me.isEmpty) return false;
+    final sender = (c.lastMessageSenderUsername ?? '').trim().toLowerCase();
+    if (sender.isNotEmpty) return sender == me;
+    return (c.lastMessage ?? '').trim().startsWith('[REPLY:');
+  }
+
+  /// Ham son mesajı parse ederek görüntülenecek metni döndürür.
+  /// Gönderici bensem başına "Siz: " ekler.
+  String _subtitle(ConversationSummaryDto c) {
     final raw = (c.lastMessage ?? '').trim();
     if (raw.isEmpty) return 'Henüz mesaj yok';
     final body = raw.replaceFirst(_replyTag, '').trim();
     final shown = body.isNotEmpty ? body : raw;
-    if (_lastMessageIsMine(myUsername, c)) {
-      return 'Siz: $shown';
-    }
+    if (_lastMessageIsMine(c)) return 'Siz: $shown';
     return shown;
   }
 
-  bool _lastMessageIsMine(String? myUsername, ConversationSummaryDto c) {
-    final me = (myUsername ?? '').trim().toLowerCase();
-    if (me.isEmpty) return false;
-    final sender = (c.lastMessageSenderUsername ?? '').trim().toLowerCase();
-    if (sender.isNotEmpty) {
-      return sender == me;
-    }
-    final last = (c.lastMessage ?? '').trim();
-    return last.startsWith('[REPLY:');
+  /// Son mesaj benden geldiyse çift tik, başkasındansa tek tik.
+  /// "Henüz mesaj yok" ise ikon yok.
+  IconData? _tickIcon(ConversationSummaryDto c) {
+    final raw = (c.lastMessage ?? '').trim();
+    if (raw.isEmpty) return null;
+    return _lastMessageIsMine(c) ? Symbols.done_all : Symbols.check;
   }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     final c = conversation;
     final title = _displayName(c);
-    final subtitle = _subtitle(myUsername, c);
+    final subtitle = _subtitle(c);
     final time = formatDmTime(c.lastMessageAt);
-    final unread = c.unreadCount ?? 0;
-    final hasUnread = unread > 0;
+    final hasUnread = (c.unreadCount ?? 0) > 0;
+    final tickIcon = _tickIcon(c);
 
+    // ── Metin stilleri ────────────────────────────────────────────────────
     final nameStyle = Theme.of(context).textTheme.titleSmall?.copyWith(
           fontWeight: hasUnread ? FontWeight.w800 : FontWeight.w500,
           color: hasUnread ? AppColors.onSurface : AppColors.secondary,
         );
+
     final msgStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
           fontWeight: hasUnread ? FontWeight.w800 : FontWeight.w500,
           color: hasUnread ? AppColors.onSurface : AppColors.secondary,
           height: 1.3,
         );
+
     final timeStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
           fontWeight: hasUnread ? FontWeight.w700 : FontWeight.w500,
           color: hasUnread ? AppColors.onSurface : AppColors.secondary,
@@ -497,69 +489,108 @@ class _ConversationTile extends StatelessWidget {
 
     return Material(
       color: Colors.transparent,
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+      child: InkWell(
         onTap: onTap,
-        leading: SizedBox(
-          width: 52,
-          height: 52,
-          child: Stack(
-            clipBehavior: Clip.none,
+        borderRadius: BorderRadius.circular(AppRadii.sm),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Positioned.fill(
-                child: CircleAvatar(
-                  backgroundColor: AppColors.primaryContainer.withValues(
-                    alpha: 0.35,
-                  ),
-                  child: Text(
-                    title.isNotEmpty ? title[0].toUpperCase() : '?',
-                    style: const TextStyle(
-                      color: AppColors.onPrimary,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ),
-              if (hasUnread)
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryContainer,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: AppColors.surfaceContainerLowest,
-                        width: 2,
+              // ── Avatar (Stack ile okunmadı noktası) ───────────────────
+              SizedBox(
+                width: 52,
+                height: 52,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Positioned.fill(
+                      child: CircleAvatar(
+                        backgroundColor:
+                            AppColors.primaryContainer.withValues(alpha: 0.35),
+                        child: Text(
+                          title.isNotEmpty ? title[0].toUpperCase() : '?',
+                          style: const TextStyle(
+                            color: AppColors.onPrimary,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 20,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                    if (hasUnread)
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryContainer,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppColors.surfaceContainerLowest,
+                              width: 2,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
+              ),
+
+              const SizedBox(width: 12),
+
+              // ── İçerik ────────────────────────────────────────────────
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Kullanıcı adı + saat
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: nameStyle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(time, style: timeStyle),
+                      ],
+                    ),
+
+                    const SizedBox(height: 3),
+
+                    // Tick ikonu + son mesaj
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        if (tickIcon != null) ...[
+                          Icon(
+                            tickIcon,
+                            size: 14,
+                            color: AppColors.secondary,
+                          ),
+                          const SizedBox(width: 3),
+                        ],
+                        Expanded(
+                          child: Text(
+                            subtitle,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: msgStyle,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             ],
-          ),
-        ),
-        title: Text(
-          title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: nameStyle,
-        ),
-        subtitle: Text(
-          subtitle,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: msgStyle,
-        ),
-        trailing: SizedBox(
-          width: 52,
-          child: Align(
-            alignment: Alignment.topRight,
-            child: Text(
-              time,
-              style: timeStyle,
-            ),
           ),
         ),
       ),
