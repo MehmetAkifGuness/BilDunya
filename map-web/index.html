@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BilDünya — Harita (Leaflet)</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <link rel="stylesheet" href="css/map.css" />
+  </head>
+  <body>
+    <div class="toolbar">
+      <label>
+        API kökü
+        <input
+          id="apiBaseInput"
+          type="text"
+          value="http://localhost:8080/api"
+          autocomplete="off"
+        />
+      </label>
+      <label>
+        JWT (Bearer)
+        <input id="jwtInput" type="password" autocomplete="off" placeholder="access token" />
+      </label>
+      <button type="button" id="saveTokenBtn">Token kaydet</button>
+      <button type="button" class="secondary" id="loadMeBtn">Profil</button>
+      <button type="button" class="secondary" id="refreshPinsBtn">User pin yenile</button>
+      <span class="hint" id="meLabel">Haritaya tıklayın: yeni pin (başlık, açıklama, fotoğraf). Popüler pinlere tıklayınca bilgi açılır.</span>
+    </div>
+    <div id="map"></div>
+
+    <div id="addPinModal" class="modal-backdrop" aria-hidden="true">
+      <div class="modal" role="dialog" aria-modal="true">
+        <h2>Yeni kullanıcı pin’i</h2>
+        <div class="coord" id="pinCoordLabel"></div>
+        <div class="field">
+          <label for="pinTitle">Başlık</label>
+          <input id="pinTitle" type="text" maxlength="200" required />
+        </div>
+        <div class="field">
+          <label for="pinDesc">Açıklama</label>
+          <textarea id="pinDesc" maxlength="2000"></textarea>
+        </div>
+        <div class="field">
+          <label for="pinFiles">Fotoğraf(lar)</label>
+          <input id="pinFiles" type="file" accept="image/*" multiple />
+        </div>
+        <div class="actions">
+          <button type="button" class="secondary" id="pinFormCancel">Vazgeç</button>
+          <button type="button" id="pinFormSubmit">Kaydet</button>
+        </div>
+      </div>
+    </div>
+
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script src="js/config.js"></script>
+    <script src="js/popularPins.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/store.js"></script>
+    <script src="js/map-app.js"></script>
+  </body>
+</html>
