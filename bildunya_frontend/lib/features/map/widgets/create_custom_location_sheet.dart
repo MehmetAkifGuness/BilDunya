@@ -94,9 +94,7 @@ class _CreateCustomLocationSheetState extends State<CreateCustomLocationSheet> {
 
     final req = CreateCustomLocationRequest(
       name: _name.text.trim(),
-      description: _description.text.trim().isEmpty
-          ? null
-          : _description.text.trim(),
+      description: _description.text.trim(),
       latitude: widget.point.latitude,
       longitude: widget.point.longitude,
       tags: _parseTags(_tags.text.trim()),
@@ -174,8 +172,12 @@ class _CreateCustomLocationSheetState extends State<CreateCustomLocationSheet> {
                   ),
                   validator: (v) {
                     final s = v?.trim() ?? '';
-                    if (s.isEmpty) return 'Ad gerekli';
-                    if (s.length > 200) return 'En fazla 200 karakter';
+                    if (s.isEmpty) {
+                      return 'Pin için bir ad yazın (en az 1 karakter).';
+                    }
+                    if (s.length > 200) {
+                      return 'Ad en fazla 200 karakter olabilir.';
+                    }
                     return null;
                   },
                 ),
@@ -188,6 +190,13 @@ class _CreateCustomLocationSheetState extends State<CreateCustomLocationSheet> {
                     labelText: 'Açıklama',
                     hintText: 'Kısa bir not...',
                   ),
+                  validator: (v) {
+                    final s = v?.trim() ?? '';
+                    if (s.isEmpty) {
+                      return 'Bu konumu tanımlayan kısa bir açıklama yazın.';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
@@ -321,9 +330,12 @@ class _CreateCustomLocationSheetState extends State<CreateCustomLocationSheet> {
                         onPressed: creating ? null : _submit,
                         icon: creating
                             ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColors.onPrimary,
+                                ),
                               )
                             : const Icon(Symbols.check),
                         label: Text(creating ? 'Kaydediliyor…' : 'Kaydet'),

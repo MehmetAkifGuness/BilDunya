@@ -494,6 +494,7 @@ class _MapViewState extends State<MapView> {
 
     final kind = await showModalBottomSheet<_CreatePinKind>(
       context: context,
+      isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: AppColors.surfaceContainer,
       shape: RoundedRectangleBorder(
@@ -556,6 +557,7 @@ class _MapViewState extends State<MapView> {
     setState(() => _pendingPoint = null);
 
     if (created == true) {
+      showAppSnackBar(context, 'Pin başarıyla eklendi!');
       if (kind == _CreatePinKind.location) {
         await _customLocations.loadNearby(
           latitude: point.latitude,

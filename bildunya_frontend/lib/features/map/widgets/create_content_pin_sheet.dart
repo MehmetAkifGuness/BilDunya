@@ -68,8 +68,7 @@ class _CreateContentPinSheetState extends State<CreateContentPinSheet> {
       contentType: 'IMAGE',
       latitude: widget.point.latitude,
       longitude: widget.point.longitude,
-      locationName:
-          _locationName.text.trim().isEmpty ? null : _locationName.text.trim(),
+      locationName: _locationName.text.trim(),
       shareType: 'PUBLIC',
       tags: _tags.text.trim().isEmpty ? null : _tags.text.trim(),
     );
@@ -146,7 +145,8 @@ class _CreateContentPinSheetState extends State<CreateContentPinSheet> {
                   controller: _locationName,
                   enabled: !uploading,
                   decoration: InputDecoration(
-                    labelText: 'Mekan adı (opsiyonel)',
+                    labelText: 'Mekan / pin adı',
+                    hintText: 'Örn. Seyir terası',
                     filled: true,
                     fillColor: AppColors.surfaceContainerLow,
                     border: OutlineInputBorder(
@@ -157,6 +157,16 @@ class _CreateContentPinSheetState extends State<CreateContentPinSheet> {
                     ),
                   ),
                   textInputAction: TextInputAction.next,
+                  validator: (v) {
+                    final s = (v ?? '').trim();
+                    if (s.isEmpty) {
+                      return 'Paylaşımın görüneceği yeri tanımlayan bir ad yazın.';
+                    }
+                    if (s.length > 200) {
+                      return 'Ad en fazla 200 karakter olabilir.';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
@@ -177,8 +187,12 @@ class _CreateContentPinSheetState extends State<CreateContentPinSheet> {
                   maxLines: 5,
                   validator: (v) {
                     final t = (v ?? '').trim();
-                    if (t.isEmpty) return 'Açıklama zorunlu.';
-                    if (t.length < 3) return 'En az 3 karakter.';
+                    if (t.isEmpty) {
+                      return 'Fotoğrafınızı kısaca anlatan bir açıklama yazın.';
+                    }
+                    if (t.length < 3) {
+                      return 'Açıklama en az 3 karakter olmalıdır.';
+                    }
                     return null;
                   },
                 ),
@@ -240,9 +254,12 @@ class _CreateContentPinSheetState extends State<CreateContentPinSheet> {
                         onPressed: uploading ? null : _submit,
                         icon: uploading
                             ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColors.onPrimary,
+                                ),
                               )
                             : const Icon(Symbols.check),
                         label: Text(uploading ? 'Kaydediliyor…' : 'Kaydet'),
