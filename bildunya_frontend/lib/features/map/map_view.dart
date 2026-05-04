@@ -19,6 +19,7 @@ import '../auth/providers/auth_provider.dart';
 import '../content/providers/contents_provider.dart';
 import '../content/screens/content_detail_view.dart';
 import 'providers/custom_locations_provider.dart';
+import 'screens/custom_location_gallery_view.dart';
 import 'widgets/create_custom_location_sheet.dart';
 
 enum _MapChip { none, historic, nature }
@@ -1108,6 +1109,26 @@ class _CustomPinPreviewCardState extends State<_CustomPinPreviewCard> {
                   ),
                 ),
               ),
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: () {
+                Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (_) => CustomLocationGalleryView(
+                      title: widget.title,
+                      imageUrls: photos,
+                      initialIndex: _active,
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Symbols.photo_library),
+              label: const Text('Keşfet'),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primaryContainer,
+                foregroundColor: AppColors.onPrimary,
+              ),
+            ),
             if (photos.length > 1) ...[
               const SizedBox(height: 10),
               SizedBox(

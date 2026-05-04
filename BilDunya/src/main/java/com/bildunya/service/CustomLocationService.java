@@ -4,11 +4,14 @@ import com.bildunya.dto.CreateCustomLocationRequest;
 import com.bildunya.dto.CustomLocationDto;
 import com.bildunya.entity.CustomLocation;
 import com.bildunya.entity.User;
+import com.bildunya.exception.FileUploadException;
 import com.bildunya.exception.ResourceNotFoundException;
 import com.bildunya.exception.UnauthorizedException;
 import com.bildunya.repository.CustomLocationRepository;
 import com.bildunya.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -26,6 +29,8 @@ import java.util.Set;
 @RequiredArgsConstructor
 @Transactional
 public class CustomLocationService {
+
+    private static final Logger log = LoggerFactory.getLogger(CustomLocationService.class);
 
     private static final double KM_PER_DEGREE_LATITUDE = 111.0;
     private static final int MAX_NAME_LENGTH = 200;
@@ -153,13 +158,23 @@ public class CustomLocationService {
             validateImageUpload(image);
         }
 
+        int addedCount = 0;
         for (MultipartFile image : images) {
             if (existing.size() >= MAX_PHOTOS_TOTAL) break;
             if (image == null || image.isEmpty()) continue;
-            String url = fileStorageService.store(image, "custom_location_" + user.getId());
-            if (url != null && !url.isBlank()) {
-                existing.add(url.trim());
+            try {
+                String url = fileStorageService.store(image, "custom_location_" + user.getId());
+                if (url != null && !url.isBlank()) {
+                    existing.add(url.trim());
+                    addedCount++;
+                }
+            } catch (FileUploadException e) {
+                log.warn("Custom location photo upload failed (locationId={}): {}", id, e.getMessage());
             }
+        }
+
+        if (addedCount == 0) {
+            throw new FileUploadException("Fotoğraf yüklenemedi. Lütfen daha sonra tekrar deneyin.");
         }
 
         if ((loc.getImageUrl() == null || loc.getImageUrl().isBlank()) && !existing.isEmpty()) {
@@ -187,9 +202,13 @@ public class CustomLocationService {
         List<String> photoUrls = new ArrayList<>();
         for (MultipartFile image : safeImages) {
             if (image == null || image.isEmpty()) continue;
-            String url = fileStorageService.store(image, "custom_location_" + user.getId());
-            if (url != null && !url.isBlank()) {
-                photoUrls.add(url.trim());
+            try {
+                String url = fileStorageService.store(image, "custom_location_" + user.getId());
+                if (url != null && !url.isBlank()) {
+                    photoUrls.add(url.trim());
+                }
+            } catch (FileUploadException e) {
+                log.warn("Custom location photo upload failed (new location): {}", e.getMessage());
             }
         }
 

@@ -24,7 +24,7 @@ public interface ChatConversationRepository extends JpaRepository<ChatConversati
 
         String getLastMessageText();
 
-        java.time.LocalDateTime getLastMessageCreatedAt();
+        Object getLastMessageCreatedAt();
 
         Number getUnreadCount();
     }

@@ -204,7 +204,7 @@ class ChatServiceTest {
                     }
 
                     @Override
-                    public LocalDateTime getLastMessageCreatedAt() {
+                    public Object getLastMessageCreatedAt() {
                         return lastAt;
                     }
 

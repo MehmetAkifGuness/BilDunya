@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.sql.Timestamp;
 import java.util.Objects;
 
 @Service
@@ -99,7 +100,7 @@ public class ChatService {
                         .otherUsername(p.getOtherUsername())
                         .otherFullName(p.getOtherFullName())
                         .lastMessage(p.getLastMessageText())
-                        .lastMessageAt(formatOrNull(p.getLastMessageCreatedAt(), formatter))
+                        .lastMessageAt(formatTemporalOrNull(p.getLastMessageCreatedAt(), formatter))
                         .unreadCount(toLongOrDefault(p.getUnreadCount(), 0L))
                         .build());
     }
@@ -239,6 +240,22 @@ public class ChatService {
 
     private static String formatOrNull(LocalDateTime dt, DateTimeFormatter formatter) {
         return dt != null ? dt.format(formatter) : null;
+    }
+
+    private static String formatTemporalOrNull(Object temporal, DateTimeFormatter formatter) {
+        if (temporal == null) return null;
+        if (temporal instanceof LocalDateTime dt) {
+            return dt.format(formatter);
+        }
+        if (temporal instanceof Timestamp ts) {
+            LocalDateTime dt = ts.toLocalDateTime();
+            return dt != null ? dt.format(formatter) : null;
+        }
+        if (temporal instanceof java.util.Date d) {
+            LocalDateTime dt = new Timestamp(d.getTime()).toLocalDateTime();
+            return dt != null ? dt.format(formatter) : null;
+        }
+        return null;
     }
 
     private static Long toLongOrNull(Number value) {

@@ -1,5 +1,6 @@
 package com.bildunya.service;
 
+import com.bildunya.exception.FileUploadException;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,7 +33,9 @@ public class FileStorageService {
             return uploadResult.get("secure_url").toString();
 
         } catch (IOException e) {
-            throw new RuntimeException("Dosya buluta yüklenirken hata oluştu: " + e.getMessage(), e);
+            throw new FileUploadException("Dosya yüklenemedi. Lütfen daha sonra tekrar deneyin.", e);
+        } catch (Exception e) {
+            throw new FileUploadException("Dosya yüklenemedi. Lütfen daha sonra tekrar deneyin.", e);
         }
     }
 }
