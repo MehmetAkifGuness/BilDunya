@@ -4,7 +4,10 @@ BilDünya, dünya haritası üzerinden gezilen yerlerin fotoğraf ve video ile k
 
 ## Ekip
 
-Başvuru formunda **4 kişi**: 1 danışman, 1 ekip kaptanı, 2 üye. Görev dağılımı (özet): mimari ve backend koordinasyonu; güvenlik, veri bütünlüğü ve doğrulama süreçleri; harita, sohbet ve profil arayüzleri. Kişisel isimler bu README’de yer almaz; tam liste başvuru belgesindedir.
+Proje dort kisilik bir ekip tarafindan gelistirilmistir:
+- Mehmet Akif Güneş
+- Nisa Yakar
+- Elif Kavurga
 
 ## Kullanılan teknolojiler
 
